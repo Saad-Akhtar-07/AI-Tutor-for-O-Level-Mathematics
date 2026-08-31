@@ -1,0 +1,414 @@
+{
+  "schema_version": "1.0",
+  "collection_id": "probability-i",
+  "title": "Probability (I)",
+  "subject": "Cambridge O Level Mathematics D (4024)",
+  "source_edition": "1st edition, for examination until 2025",
+  "source_files": {
+    "questions": "Questions_data/Probability/probability I.pdf",
+    "mark_scheme": "Questions_data/Probability/probability I - mark scheme.pdf"
+  },
+  "question_count": 20,
+  "total_marks": 115,
+  "review_status": "human_transcribed_and_visually_checked",
+  "questions": [
+    {
+      "id": "probability-001",
+      "number": 1,
+      "title": "Grouped times and probability",
+      "syllabus_codes": ["9.3", "8.1"],
+      "source_pages": { "question": [2], "mark_scheme": [2] },
+      "prompt": [
+        { "type": "paragraph", "content": "The time taken for each of 120 students to complete a cooking challenge is shown in the table." },
+        {
+          "type": "table",
+          "rows": [
+            ["Time ($t$ minutes)", "$20 < t \\le 25$", "$25 < t \\le 30$", "$30 < t \\le 35$", "$35 < t \\le 40$", "$40 < t \\le 45$"],
+            ["Frequency", "44", "32", "28", "12", "4"]
+          ]
+        }
+      ],
+      "parts": [
+        {
+          "id": "q01.a",
+          "label": "(a)",
+          "marks": 1,
+          "prompt": [{ "type": "paragraph", "content": "Write down the modal time interval." }],
+          "answer_suffix": "interval",
+          "mark_scheme": { "answer": "$20 < t \\le 25$", "marking_points": [] }
+        },
+        {
+          "id": "q01.b",
+          "label": "(b)",
+          "marks": 1,
+          "prompt": [{ "type": "paragraph", "content": "Write down the interval containing the median time." }],
+          "answer_suffix": "interval",
+          "mark_scheme": { "answer": "$25 < t \\le 30$", "marking_points": [] }
+        },
+        {
+          "id": "q01.c",
+          "label": "(c)",
+          "marks": 4,
+          "prompt": [{ "type": "paragraph", "content": "Calculate an estimate of the mean time." }],
+          "answer_suffix": "min",
+          "mark_scheme": {
+            "answer": "$28.3$ or $28.33\\ldots$ minutes",
+            "marking_points": [
+              { "code": "M1", "text": "Uses the class midpoints 22.5, 27.5, 32.5, 37.5 and 42.5." },
+              { "code": "M1", "text": "Calculates $\\sum fx$ using the correct intervals and boundaries." },
+              { "code": "M1dep", "text": "Divides $\\sum fx$ by 120." },
+              { "code": "A1", "text": "Obtains the accepted answer." }
+            ]
+          }
+        },
+        {
+          "id": "q01.d",
+          "label": "(d)",
+          "marks": 1,
+          "prompt": [{ "type": "paragraph", "content": "A student is chosen at random. Find the probability that this student takes more than 40 minutes." }],
+          "mark_scheme": { "answer": "$\\frac{4}{120}$ or equivalent", "marking_points": [] }
+        }
+      ],
+      "total_marks": 7
+    },
+    {
+      "id": "probability-002",
+      "number": 2,
+      "title": "Sweets without replacement",
+      "syllabus_codes": ["8.1", "8.3"],
+      "source_pages": { "question": [2, 3], "mark_scheme": [2, 3] },
+      "prompt": [{ "type": "paragraph", "content": "Samira and Sonia each have a bag containing 20 sweets. In each bag, there are 5 red, 6 green and 9 yellow sweets." }],
+      "parts": [
+        {
+          "id": "q02.a",
+          "label": "(a)",
+          "marks": 1,
+          "prompt": [{ "type": "paragraph", "content": "Samira chooses one sweet at random from her bag. Write down the probability that she chooses a yellow sweet." }],
+          "mark_scheme": { "answer": "$\\frac{9}{20}$", "marking_points": [] }
+        },
+        {
+          "id": "q02.b.i",
+          "label": "(b)(i)",
+          "marks": 2,
+          "prompt": [{ "type": "paragraph", "content": "Sonia chooses two sweets at random, without replacement, from her bag. Show that the probability that she chooses two green sweets is $\\frac{3}{38}$." }],
+          "mark_scheme": {
+            "answer": "$\\frac{30}{380}=\\frac{3}{38}$",
+            "marking_points": [
+              { "code": "M1", "text": "Uses $\\frac{6}{20}\\times\\frac{5}{19}$." },
+              { "code": "A1", "text": "Obtains $\\frac{30}{380}$ or an equivalent form." }
+            ]
+          }
+        },
+        {
+          "id": "q02.b.ii",
+          "label": "(b)(ii)",
+          "marks": 4,
+          "prompt": [{ "type": "paragraph", "content": "Calculate the probability that the sweets she chooses are not both the same colour." }],
+          "mark_scheme": {
+            "answer": "$\\frac{258}{380}$ or equivalent",
+            "marking_points": [
+              { "code": "M3", "text": "Uses $1-\\frac{3}{38}-\\frac{5}{20}\\times\\frac{4}{19}-\\frac{9}{20}\\times\\frac{8}{19}$." },
+              { "code": "M2", "text": "Alternatively, adds the probabilities of the six ordered different-colour outcomes." },
+              { "code": "M1", "text": "Awarded for one correct product other than $\\frac{6}{20}\\times\\frac{5}{19}$." }
+            ]
+          }
+        }
+      ],
+      "total_marks": 7
+    },
+    {
+      "id": "probability-003",
+      "number": 3,
+      "title": "Heights, cumulative frequency and probability",
+      "syllabus_codes": ["9.3", "9.6", "8.1", "8.3"],
+      "source_pages": { "question": [3, 4, 5], "mark_scheme": [3, 4, 5] },
+      "prompt": [
+        { "type": "paragraph", "content": "The heights, $h$ metres, of the 120 boys in an athletics club are recorded. The table shows information about the heights of the boys." },
+        {
+          "type": "table",
+          "rows": [
+            ["Height ($h$ metres)", "$1.3 < h \\le 1.4$", "$1.4 < h \\le 1.5$", "$1.5 < h \\le 1.6$", "$1.6 < h \\le 1.7$", "$1.7 < h \\le 1.8$", "$1.8 < h \\le 1.9$"],
+            ["Frequency", "7", "18", "30", "24", "27", "14"]
+          ]
+        }
+      ],
+      "parts": [
+        { "id": "q03.a.i", "label": "(a)(i)", "marks": 1, "prompt": [{ "type": "paragraph", "content": "Write down the modal class." }], "mark_scheme": { "answer": "$1.5 < h \\le 1.6$", "marking_points": [] } },
+        {
+          "id": "q03.a.ii",
+          "label": "(a)(ii)",
+          "marks": 4,
+          "prompt": [{ "type": "paragraph", "content": "Calculate an estimate of the mean height." }],
+          "answer_suffix": "m",
+          "mark_scheme": {
+            "answer": "$1.62$ or $1.623\\ldots$ m",
+            "marking_points": [
+              { "code": "M1", "text": "Uses the midpoints 1.35, 1.45, 1.55, 1.65, 1.75 and 1.85." },
+              { "code": "M1", "text": "Calculates $\\sum fx$." },
+              { "code": "M1dep", "text": "Divides their $\\sum fx$ by 120." },
+              { "code": "A1", "text": "Obtains the accepted answer." }
+            ]
+          }
+        },
+        { "id": "q03.b.i", "label": "(b)(i)", "marks": 1, "prompt": [{ "type": "paragraph", "content": "One boy is chosen at random from the club. Find the probability that this boy has a height greater than 1.8 m." }], "mark_scheme": { "answer": "$\\frac{14}{120}$ or equivalent", "marking_points": [] } },
+        {
+          "id": "q03.b.ii",
+          "label": "(b)(ii)",
+          "marks": 4,
+          "prompt": [{ "type": "paragraph", "content": "Three boys are chosen at random from the club. Calculate the probability that one boy has a height greater than 1.8 m and the other two boys each have a height of 1.4 m or less." }],
+          "mark_scheme": {
+            "answer": "$\\frac{21}{20060}$ or equivalent",
+            "marking_points": [
+              { "code": "M3", "text": "Uses $3\\left(\\frac{14}{120}\\times\\frac{7}{119}\\times\\frac{6}{118}\\right)$." },
+              { "code": "M2", "text": "Uses one correct ordered product for the required selection." },
+              { "code": "M1", "text": "Uses the three relevant probability factors." },
+              { "code": "SC1", "text": "Special case for $\\frac{343}{864000}$ or $\\frac{343}{288000}$." }
+            ]
+          }
+        },
+        {
+          "id": "q03.c.i",
+          "label": "(c)(i)",
+          "marks": 2,
+          "prompt": [
+            { "type": "paragraph", "content": "Use the frequency table to complete the cumulative frequency table." },
+            { "type": "table", "rows": [["Height ($h$ metres)", "$h \\le 1.4$", "$h \\le 1.5$", "$h \\le 1.6$", "$h \\le 1.7$", "$h \\le 1.8$", "$h \\le 1.9$"], ["Cumulative frequency", "7", "25", "", "", "", ""]] }
+          ],
+          "mark_scheme": { "answer": "The missing cumulative frequencies are $55, 79, 106, 120$.", "marking_points": [{ "code": "B1", "text": "Awarded for two or three correct values." }] }
+        },
+        {
+          "id": "q03.c.ii",
+          "label": "(c)(ii)",
+          "marks": 3,
+          "prompt": [{ "type": "paragraph", "content": "On the grid, draw a cumulative frequency diagram to show this information." }, { "type": "coordinate_grid", "x_label": "Height (m)", "y_label": "Cumulative frequency", "x_min": 1.3, "x_max": 1.9, "y_min": 0, "y_max": 120 }],
+          "mark_scheme": {
+            "answer": "A correct increasing cumulative-frequency curve or polygon through $(1.4,7)$, $(1.5,25)$, $(1.6,55)$, $(1.7,79)$, $(1.8,106)$ and $(1.9,120)$.",
+            "marking_points": [
+              { "code": "B1", "text": "Correct horizontal positions of the plots." },
+              { "code": "B1FT", "text": "Correct vertical positions, following through their table." },
+              { "code": "B1FT", "text": "A reasonable increasing curve or polygon through their six points." },
+              { "code": "SC1", "text": "If no other marks are scored, five of the six points plotted correctly." }
+            ]
+          }
+        },
+        { "id": "q03.d.i", "label": "(d)(i)", "marks": 1, "prompt": [{ "type": "paragraph", "content": "Use your diagram to find an estimate for the median height." }], "answer_suffix": "m", "mark_scheme": { "answer": "$1.62$ to $1.63$ m", "marking_points": [] } },
+        { "id": "q03.d.ii", "label": "(d)(ii)", "marks": 2, "prompt": [{ "type": "paragraph", "content": "Use your diagram to find an estimate for the 40th percentile." }], "answer_suffix": "m", "mark_scheme": { "answer": "$1.57$ to $1.58$ m", "marking_points": [{ "code": "B1", "text": "Uses cumulative frequency 48." }] } }
+      ],
+      "total_marks": 18
+    },
+    {
+      "id": "probability-004",
+      "number": 4,
+      "title": "Single-event probability",
+      "syllabus_codes": ["8.1"],
+      "source_pages": { "question": [5, 6], "mark_scheme": [5] },
+      "prompt": [{ "type": "paragraph", "content": "Soraya makes 30 flags. 11 flags are pink, 7 are yellow, 5 are blue, 4 are silver and 3 are green. Soraya takes a flag at random. Find the probability that the flag she takes is:" }],
+      "parts": [
+        { "id": "q04.a", "label": "(a)", "marks": 1, "prompt": [{ "type": "paragraph", "content": "pink," }], "mark_scheme": { "answer": "$\\frac{11}{30}$", "marking_points": [] } },
+        { "id": "q04.b", "label": "(b)", "marks": 1, "prompt": [{ "type": "paragraph", "content": "not blue," }], "mark_scheme": { "answer": "$\\frac{25}{30}$ or equivalent", "marking_points": [] } },
+        { "id": "q04.c", "label": "(c)", "marks": 1, "prompt": [{ "type": "paragraph", "content": "red." }], "mark_scheme": { "answer": "$0$", "marking_points": [] } }
+      ],
+      "total_marks": 3
+    },
+    {
+      "id": "probability-005",
+      "number": 5,
+      "title": "Impossible event",
+      "syllabus_codes": ["8.1"],
+      "source_pages": { "question": [6], "mark_scheme": [5] },
+      "prompt": [{ "type": "paragraph", "content": "A box contains 22 coloured pencils: 6 pink, 9 blue and 7 yellow. A pencil is taken at random from the box." }],
+      "parts": [{ "id": "q05", "label": "", "marks": 1, "prompt": [{ "type": "paragraph", "content": "Write down the probability that this pencil is green." }], "mark_scheme": { "answer": "$0$", "marking_points": [] } }],
+      "total_marks": 1
+    },
+    {
+      "id": "probability-006",
+      "number": 6,
+      "title": "Combined conditional paths",
+      "syllabus_codes": ["8.3"],
+      "source_pages": { "question": [7], "mark_scheme": [5] },
+      "prompt": [{ "type": "paragraph", "content": "The probability that the school bus is late is $\\frac{9}{10}$. If the bus is late, the probability that Seb travels on it is $\\frac{15}{16}$. If the bus is on time, the probability that Seb travels on it is $\\frac{3}{4}$." }],
+      "parts": [{ "id": "q06", "label": "", "marks": 3, "prompt": [{ "type": "paragraph", "content": "Find the probability that Seb travels on the bus." }], "mark_scheme": { "answer": "$\\frac{147}{160}$", "marking_points": [{ "code": "M2", "text": "Uses $\\frac{1}{10}\\times\\frac{3}{4}+\\frac{9}{10}\\times\\frac{15}{16}$." }, { "code": "M1", "text": "Uses either correct branch product." }] } }],
+      "total_marks": 3
+    },
+    {
+      "id": "probability-007",
+      "number": 7,
+      "title": "Cards without replacement",
+      "syllabus_codes": ["8.3"],
+      "source_pages": { "question": [7], "mark_scheme": [5] },
+      "prompt": [{ "type": "cards", "sets": [{ "label": "Cards", "values": [1, 2, 3, 4, 5] }] }, { "type": "paragraph", "content": "Two of the five cards are taken at random, without replacement." }],
+      "parts": [{ "id": "q07", "label": "", "marks": 2, "prompt": [{ "type": "paragraph", "content": "Find the probability that both cards show an even number." }], "mark_scheme": { "answer": "$\\frac{2}{20}$ or equivalent", "marking_points": [{ "code": "M1", "text": "Uses $\\frac{2}{5}\\times\\frac{1}{4}$." }] } }],
+      "total_marks": 2
+    },
+    {
+      "id": "probability-008",
+      "number": 8,
+      "title": "Three-set Venn diagram",
+      "syllabus_codes": ["8.3"],
+      "source_pages": { "question": [7, 8], "mark_scheme": [5, 6] },
+      "prompt": [
+        { "type": "paragraph", "content": "The Venn diagram shows information about the number of gardeners who grow melons ($M$), potatoes ($P$) and carrots ($C$)." },
+        { "type": "venn", "labels": ["M", "P", "C"], "regions": { "m_only": 3, "p_only": 12, "c_only": 7, "m_p": 6, "m_c": 5, "p_c": 10, "m_p_c": 2, "outside": 23 } }
+      ],
+      "parts": [
+        { "id": "q08.a", "label": "(a)", "marks": 2, "prompt": [{ "type": "paragraph", "content": "A gardener is chosen at random from the gardeners who grow melons. Find the probability that this gardener does not grow carrots." }], "mark_scheme": { "answer": "$\\frac{9}{16}$ or equivalent", "marking_points": [{ "code": "B1", "text": "Accepts an equivalent fraction $\\frac{k}{16}$ or $\\frac{9}{k}$ provided it is less than 1." }] } },
+        { "id": "q08.b", "label": "(b)", "marks": 1, "prompt": [{ "type": "paragraph", "content": "Find $n((M \\cap P) \\cup C')$." }], "mark_scheme": { "answer": "$46$", "marking_points": [] } }
+      ],
+      "total_marks": 3
+    },
+    {
+      "id": "probability-009",
+      "number": 9,
+      "title": "Probability and a quadratic equation",
+      "syllabus_codes": ["8.1", "2.6"],
+      "source_pages": { "question": [8, 9], "mark_scheme": [6, 7] },
+      "prompt": [{ "type": "paragraph", "content": "The probability that Andrei cycles to school is $r$." }],
+      "parts": [
+        { "id": "q09.a", "label": "(a)", "marks": 1, "prompt": [{ "type": "paragraph", "content": "Write down, in terms of $r$, the probability that Andrei does not cycle to school." }], "mark_scheme": { "answer": "$1-r$", "marking_points": [] } },
+        { "id": "q09.b.i", "label": "(b)(i)", "marks": 1, "prompt": [{ "type": "paragraph", "content": "The probability that Benoit does not cycle to school is $1.3-r$. The probability that both Andrei and Benoit do not cycle to school is 0.4. Complete the equation in terms of $r$." }], "mark_scheme": { "answer": "$(1-r)(1.3-r)=0.4$", "marking_points": [{ "code": "FT", "text": "Follow through their answer to part (a), provided it is an expression in $r$." }] } },
+        { "id": "q09.b.ii", "label": "(b)(ii)", "marks": 3, "prompt": [{ "type": "paragraph", "content": "Show that this equation simplifies to $10r^2-23r+9=0$." }], "mark_scheme": { "answer": "$10r^2-23r+9=0$", "marking_points": [{ "code": "M1", "text": "Expands to $1.3-1.3r-r+r^2$ or better." }, { "code": "M1", "text": "Rearranges to $0.9-2.3r+r^2=0$, or an equivalent equation multiplied by 10." }, { "code": "A1", "text": "Obtains the required quadratic with no errors or omissions." }] } },
+        { "id": "q09.b.iii", "label": "(b)(iii)", "marks": 3, "prompt": [{ "type": "paragraph", "content": "Solve by factorisation: $10r^2-23r+9=0$." }], "mark_scheme": { "answer": "$r=\\frac{9}{5}$ or $r=\\frac{1}{2}$", "marking_points": [{ "code": "B2", "text": "Factorises as $(5r-9)(2r-1)=0$." }, { "code": "B1", "text": "Awarded for a valid partial factorisation or for both correct factors seen." }, { "code": "B1", "text": "Obtains both roots." }] } },
+        { "id": "q09.b.iv", "label": "(b)(iv)", "marks": 1, "prompt": [{ "type": "paragraph", "content": "Find the probability that Benoit does not cycle to school." }], "mark_scheme": { "answer": "$0.8$ or $\\frac{4}{5}$", "marking_points": [] } }
+      ],
+      "total_marks": 9
+    },
+    {
+      "id": "probability-010",
+      "number": 10,
+      "title": "Three counters without replacement",
+      "syllabus_codes": ["8.3"],
+      "source_pages": { "question": [10], "mark_scheme": [8] },
+      "prompt": [{ "type": "paragraph", "content": "Esme has a bag with 5 green counters and 4 red counters. She takes three counters at random from the bag without replacement." }],
+      "parts": [{ "id": "q10", "label": "", "marks": 4, "prompt": [{ "type": "paragraph", "content": "Work out the probability that the three counters are all the same colour." }], "mark_scheme": { "answer": "$\\frac{1}{6}$", "marking_points": [{ "code": "M3", "text": "Uses $\\frac{5}{9}\\times\\frac{4}{8}\\times\\frac{3}{7}+\\frac{4}{9}\\times\\frac{3}{8}\\times\\frac{2}{7}$." }, { "code": "M2", "text": "Uses either complete same-colour product." }, { "code": "M1", "text": "Uses one correct probability chain." }, { "code": "SC1", "text": "Special case for $\\frac{5^3+4^3}{729}$ or equivalent." }] } }],
+      "total_marks": 4
+    },
+    {
+      "id": "probability-011",
+      "number": 11,
+      "title": "Unknown number of counters",
+      "syllabus_codes": ["8.3", "2.6"],
+      "source_pages": { "question": [10, 11], "mark_scheme": [8, 9, 10] },
+      "prompt": [{ "type": "paragraph", "content": "Angelo has a bag containing 3 white counters and $x$ black counters. He takes two counters at random from the bag, without replacement." }],
+      "parts": [
+        { "id": "q11.a", "label": "(a)", "marks": 2, "prompt": [{ "type": "paragraph", "content": "Complete the statement: the probability that Angelo takes two black counters is $\\frac{x}{x+3}\\times$ _____." }], "mark_scheme": { "answer": "$\\frac{x-1}{x+2}$", "marking_points": [{ "code": "B1", "text": "Awarded for either the numerator or denominator correct." }] } },
+        { "id": "q11.b.i", "label": "(b)(i)", "marks": 4, "prompt": [{ "type": "paragraph", "content": "The probability that Angelo takes two black counters is $\\frac{7}{15}$. Show that $4x^2-25x-21=0$." }], "mark_scheme": { "answer": "$4x^2-25x-21=0$", "marking_points": [{ "code": "B1", "text": "Forms $\\frac{x}{x+3}\\times\\frac{x-1}{x+2}=\\frac{7}{15}$." }, { "code": "M1", "text": "Clears fractions to get $15x(x-1)=7(x+3)(x+2)$." }, { "code": "M1", "text": "Expands all brackets correctly." }, { "code": "A1", "text": "Obtains the required quadratic with a further valid stage." }] } },
+        { "id": "q11.b.ii", "label": "(b)(ii)", "marks": 3, "prompt": [{ "type": "paragraph", "content": "Solve by factorisation: $4x^2-25x-21=0$." }], "mark_scheme": { "answer": "$x=7$ or $x=-\\frac{3}{4}$", "marking_points": [{ "code": "M2", "text": "Factorises as $(4x+3)(x-7)=0$." }, { "code": "M1", "text": "Awarded for a valid partial factorisation." }, { "code": "B1", "text": "Obtains both roots." }] } },
+        { "id": "q11.b.iii", "label": "(b)(iii)", "marks": 1, "prompt": [{ "type": "paragraph", "content": "Write down the number of black counters in the bag." }], "mark_scheme": { "answer": "$7$", "marking_points": [{ "code": "FT", "text": "Follow through their positive solution." }] } }
+      ],
+      "total_marks": 10
+    },
+    {
+      "id": "probability-012",
+      "number": 12,
+      "title": "One ball of each colour",
+      "syllabus_codes": ["8.3"],
+      "source_pages": { "question": [11], "mark_scheme": [10] },
+      "prompt": [{ "type": "paragraph", "content": "Ravi has a bag containing 10 red balls and 8 blue balls. He takes two balls at random from the bag, without replacement." }],
+      "parts": [{ "id": "q12", "label": "", "marks": 3, "prompt": [{ "type": "paragraph", "content": "Find the probability that one ball is red and one ball is blue." }], "mark_scheme": { "answer": "$\\frac{80}{153}$", "marking_points": [{ "code": "M2", "text": "Uses $2\\times\\frac{10}{18}\\times\\frac{8}{17}$." }, { "code": "M1", "text": "Uses $\\frac{10}{18}\\times\\frac{8}{17}$ for one order." }, { "code": "SC1", "text": "Special case for $\\frac{160}{324}$." }] } }],
+      "total_marks": 3
+    },
+    {
+      "id": "probability-013",
+      "number": 13,
+      "title": "Three balls of the same colour",
+      "syllabus_codes": ["8.3"],
+      "source_pages": { "question": [12], "mark_scheme": [10] },
+      "prompt": [{ "type": "paragraph", "content": "Talika has a bag containing 10 red balls and 8 blue balls. She takes three balls at random from the bag, without replacement." }],
+      "parts": [{ "id": "q13", "label": "", "marks": 4, "prompt": [{ "type": "paragraph", "content": "Calculate the probability that the three balls are the same colour." }], "mark_scheme": { "answer": "$\\frac{11}{51}$", "marking_points": [{ "code": "M3", "text": "Uses $\\frac{10}{18}\\times\\frac{9}{17}\\times\\frac{8}{16}+\\frac{8}{18}\\times\\frac{7}{17}\\times\\frac{6}{16}$." }, { "code": "M2", "text": "Uses either complete same-colour product." }, { "code": "M1", "text": "Uses the three relevant factors for one colour." }, { "code": "SC1", "text": "Special case for $\\frac{1512}{5832}$." }] } }],
+      "total_marks": 4
+    },
+    {
+      "id": "probability-014",
+      "number": 14,
+      "title": "Pencil-case masses",
+      "syllabus_codes": ["9.3", "8.1"],
+      "source_pages": { "question": [12, 13], "mark_scheme": [11] },
+      "prompt": [{ "type": "paragraph", "content": "20 students each record the mass, $p$ grams, of their pencil case. The table shows the results." }, { "type": "table", "rows": [["Mass ($p$ grams)", "$0 < p \\le 50$", "$50 < p \\le 100$", "$100 < p \\le 125$", "$125 < p \\le 150$", "$150 < p \\le 200$"], ["Frequency", "2", "5", "4", "6", "3"]] }],
+      "parts": [
+        { "id": "q14.a", "label": "(a)", "marks": 4, "prompt": [{ "type": "paragraph", "content": "Calculate an estimate of the mean mass." }], "answer_suffix": "g", "mark_scheme": { "answer": "$111.25$ g", "marking_points": [{ "code": "M1", "text": "Uses midpoints 25, 75, 112.5, 137.5 and 175." }, { "code": "M1", "text": "Calculates $\\sum fx$ with the correct intervals." }, { "code": "M1dep", "text": "Divides $\\sum fx$ by 20." }, { "code": "A1", "text": "Obtains the accepted answer." }] } },
+        { "id": "q14.b", "label": "(b)", "marks": 2, "prompt": [{ "type": "paragraph", "content": "Use the frequency table to complete the cumulative frequency row for $p\\le50$, $p\\le100$, $p\\le125$, $p\\le150$ and $p\\le200$." }], "mark_scheme": { "answer": "$2, 7, 11, 17, 20$", "marking_points": [{ "code": "B1", "text": "Awarded for three correct missing values." }] } },
+        { "id": "q14.c", "label": "(c)", "marks": 1, "prompt": [{ "type": "paragraph", "content": "A student is chosen at random. Find the probability that this student has a pencil case with a mass greater than 150 g." }], "mark_scheme": { "answer": "$\\frac{3}{20}$", "marking_points": [] } }
+      ],
+      "total_marks": 7
+    },
+    {
+      "id": "probability-015",
+      "number": 15,
+      "title": "City choices",
+      "syllabus_codes": ["8.1", "8.3"],
+      "source_pages": { "question": [13, 14], "mark_scheme": [11] },
+      "prompt": [{ "type": "paragraph", "content": "A group of 200 people were asked which city they would like to visit next." }, { "type": "table", "rows": [["City", "London", "Paris", "New York", "Tokyo"], ["Number of people", "50", "48", "56", "46"]] }],
+      "parts": [
+        { "id": "q15.a", "label": "(a)", "marks": 2, "prompt": [{ "type": "paragraph", "content": "A person is chosen at random. Write down the probability that this person would like to visit either Paris or Tokyo next." }], "mark_scheme": { "answer": "$\\frac{94}{200}$ or equivalent", "marking_points": [{ "code": "M1", "text": "Uses $\\frac{46}{200}+\\frac{48}{200}$." }] } },
+        { "id": "q15.b", "label": "(b)", "marks": 3, "prompt": [{ "type": "paragraph", "content": "Two people are chosen at random. Find the probability that one would like to visit London next and the other New York next. Give your answer as a percentage." }], "answer_suffix": "%", "mark_scheme": { "answer": "$14.1\\%$ or $14.07\\ldots\\%$", "marking_points": [{ "code": "M2", "text": "Uses $2\\left(\\frac{50}{200}\\times\\frac{56}{199}\\right)$." }, { "code": "M1", "text": "Uses one correct ordered product." }] } }
+      ],
+      "total_marks": 5
+    },
+    {
+      "id": "probability-016",
+      "number": 16,
+      "title": "Students in three sets",
+      "syllabus_codes": ["8.3"],
+      "source_pages": { "question": [14, 15], "mark_scheme": [11, 12] },
+      "prompt": [{ "type": "paragraph", "content": "The Venn diagram shows information about the number of students who study Music ($M$), Drama ($D$) and Geography ($G$)." }, { "type": "venn", "labels": ["M", "D", "G"], "regions": { "m_only": 5, "d_only": 8, "g_only": 12, "m_d": 3, "m_g": 4, "d_g": 9, "m_d_g": 2, "outside": null } }],
+      "parts": [
+        { "id": "q16.a", "label": "(a)", "marks": 1, "prompt": [{ "type": "paragraph", "content": "How many students study Music?" }], "mark_scheme": { "answer": "$14$", "marking_points": [] } },
+        { "id": "q16.b", "label": "(b)", "marks": 1, "prompt": [{ "type": "paragraph", "content": "How many students study exactly two subjects?" }], "mark_scheme": { "answer": "$16$", "marking_points": [] } },
+        { "id": "q16.c", "label": "(c)", "marks": 3, "prompt": [{ "type": "paragraph", "content": "Two students are chosen at random from those who study Drama. Calculate the probability that they both also study Music." }], "mark_scheme": { "answer": "$\\frac{20}{462}$ or equivalent", "marking_points": [{ "code": "M2", "text": "Uses $\\frac{5}{22}\\times\\frac{4}{21}$." }, { "code": "M1", "text": "Uses $\\frac{5}{22}$ as the first probability." }] } },
+        { "id": "q16.d", "label": "(d)", "marks": 1, "prompt": [{ "type": "paragraph", "content": "In the Venn diagram, shade $M\\cap D'$." }], "mark_scheme": { "answer": "Shade the parts inside $M$ but outside $D$: the $M$-only region and the $M\\cap G$-only region.", "marking_points": [] } }
+      ],
+      "total_marks": 6
+    },
+    {
+      "id": "probability-017",
+      "number": 17,
+      "title": "A ball from each bag",
+      "syllabus_codes": ["8.3"],
+      "source_pages": { "question": [15], "mark_scheme": [12] },
+      "prompt": [{ "type": "bags", "bags": [{ "label": "Bag A", "black": 3, "white": 2 }, { "label": "Bag B", "black": 1, "white": 3 }] }, { "type": "paragraph", "content": "A ball is taken at random from each bag." }],
+      "parts": [
+        { "id": "q17.a", "label": "(a)", "marks": 1, "prompt": [{ "type": "paragraph", "content": "Show that a black ball is more likely to be taken from bag A than from bag B." }], "mark_scheme": { "answer": "$\\frac{3}{5}>\\frac{1}{4}$", "marking_points": [{ "code": "B1", "text": "Equivalent comparisons using common denominators, decimals or percentages are accepted." }] } },
+        { "id": "q17.b", "label": "(b)", "marks": 3, "prompt": [{ "type": "paragraph", "content": "Find the probability that the two balls have different colours." }], "mark_scheme": { "answer": "$\\frac{11}{20}$", "marking_points": [{ "code": "M2", "text": "Uses $\\frac{3}{5}\\times\\frac{3}{4}+\\frac{2}{5}\\times\\frac{1}{4}$." }, { "code": "M1", "text": "Uses either correct different-colour product." }] } }
+      ],
+      "total_marks": 4
+    },
+    {
+      "id": "probability-018",
+      "number": 18,
+      "title": "Transfer between two bags",
+      "syllabus_codes": ["8.3"],
+      "source_pages": { "question": [16], "mark_scheme": [13] },
+      "prompt": [{ "type": "bags", "bags": [{ "label": "Bag A", "black": 3, "white": 2 }, { "label": "Bag B", "black": 1, "white": 3 }] }, { "type": "paragraph", "content": "A ball is taken at random from bag A and its colour is recorded. This ball is placed in bag B. A ball is then taken at random from bag B." }],
+      "parts": [{ "id": "q18", "label": "", "marks": 3, "prompt": [{ "type": "paragraph", "content": "Find the probability that the ball taken from bag B has a different colour from the ball taken from bag A." }], "mark_scheme": { "answer": "$\\frac{11}{25}$", "marking_points": [{ "code": "M2", "text": "Uses $\\frac{3}{5}\\times\\frac{3}{5}+\\frac{2}{5}\\times\\frac{1}{5}$." }, { "code": "M1", "text": "Uses either correct product, or a correct tree with all 25 outcomes and the 11 successful outcomes identified." }] } }],
+      "total_marks": 3
+    },
+    {
+      "id": "probability-019",
+      "number": 19,
+      "title": "Packets of chips without replacement",
+      "syllabus_codes": ["8.3"],
+      "source_pages": { "question": [16, 17], "mark_scheme": [13, 14, 15] },
+      "prompt": [{ "type": "paragraph", "content": "A box contains 20 packets of potato chips: 6 barbecue flavoured, 10 salt flavoured and 4 chicken flavoured." }],
+      "parts": [
+        { "id": "q19.a.i", "label": "(a)(i)", "marks": 2, "prompt": [{ "type": "paragraph", "content": "Maria takes two packets at random without replacement. Show that the probability that she takes two salt flavoured packets is $\\frac{9}{38}$." }], "mark_scheme": { "answer": "$\\frac{10}{20}\\times\\frac{9}{19}=\\frac{9}{38}$", "marking_points": [{ "code": "B1", "text": "Uses $\\frac{9}{19}$ for the second selection." }, { "code": "M2", "text": "Uses the complete correct product." }] } },
+        { "id": "q19.a.ii", "label": "(a)(ii)", "marks": 4, "prompt": [{ "type": "paragraph", "content": "Find the probability that she takes two packets of different flavours." }], "mark_scheme": { "answer": "$\\frac{62}{95}$", "marking_points": [{ "code": "M3", "text": "Uses $\\frac{6}{20}\\times\\frac{14}{19}+\\frac{10}{20}\\times\\frac{10}{19}+\\frac{4}{20}\\times\\frac{16}{19}$." }, { "code": "M2", "text": "Uses a correct sum of two products of different flavours." }, { "code": "M1", "text": "Uses one correct product of different flavours." }] } },
+        { "id": "q19.b", "label": "(b)", "marks": 3, "prompt": [{ "type": "paragraph", "content": "Maria takes three packets at random, without replacement. Find the probability that she takes at least two packets of chicken flavoured chips." }], "mark_scheme": { "answer": "$\\frac{5}{57}$", "marking_points": [{ "code": "M2", "text": "Uses $3\\left(\\frac{4}{20}\\times\\frac{3}{19}\\times\\frac{16}{18}\\right)+\\frac{4}{20}\\times\\frac{3}{19}\\times\\frac{2}{18}$." }, { "code": "M1", "text": "Uses a correct product for a relevant outcome." }] } }
+      ],
+      "total_marks": 9
+    },
+    {
+      "id": "probability-020",
+      "number": 20,
+      "title": "Comparing two card experiments",
+      "syllabus_codes": ["8.3"],
+      "source_pages": { "question": [17, 18], "mark_scheme": [16, 17] },
+      "prompt": [{ "type": "cards", "sets": [{ "label": "Set A", "values": [1, 1, 2, 2, 2] }, { "label": "Set B", "values": [0, 1, 1, 1, 2] }] }],
+      "parts": [
+        { "id": "q20.a", "label": "(a)", "marks": 3, "prompt": [{ "type": "paragraph", "content": "Jojo chooses two cards at random from Set A without replacement. Find the probability that the two cards have the same number." }], "mark_scheme": { "answer": "$\\frac{8}{20}$ or equivalent", "marking_points": [{ "code": "M2", "text": "Uses $\\frac{2}{5}\\times\\frac{1}{4}+\\frac{3}{5}\\times\\frac{2}{4}$." }, { "code": "M1", "text": "Uses one correct product, or identifies the 8 successful outcomes out of 20 using a tree or two-way table." }, { "code": "SC1", "text": "Special case for $\\frac{13}{25}$ when replacement is used." }] } },
+        { "id": "q20.b", "label": "(b)", "marks": 3, "prompt": [{ "type": "paragraph", "content": "Jojo replaces the two cards. Kylie then chooses one card at random from Set A and one card at random from Set B. Find the probability that the two cards have the same number." }], "mark_scheme": { "answer": "$\\frac{9}{25}$", "marking_points": [{ "code": "M2", "text": "Uses $\\frac{2}{5}\\times\\frac{3}{5}+\\frac{3}{5}\\times\\frac{1}{5}$." }, { "code": "M1", "text": "Uses one correct product, or identifies the 9 successful outcomes out of 25 using a tree or two-way table." }] } },
+        { "id": "q20.c", "label": "(c)", "marks": 1, "prompt": [{ "type": "paragraph", "content": "Who is most likely to choose two cards that have the same number? Show all your working." }], "mark_scheme": { "answer": "Jojo, for example because $\\frac{40}{100}>\\frac{36}{100}$.", "marking_points": [{ "code": "1FT", "text": "Follow through their answers to parts (a) and (b), provided both are probabilities from 0 to 1." }] } }
+      ],
+      "total_marks": 7
+    }
+  ]
+}

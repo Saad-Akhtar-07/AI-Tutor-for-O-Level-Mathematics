@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#f8f8f5" />
+    <meta name="description" content="A structured explorer for the Cambridge O Level Mathematics (Syllabus D) 4024 syllabus." />
+    <script>
+      (() => {
+        let savedTheme = null
+        try { savedTheme = localStorage.getItem('syllabus-theme') } catch {}
+        const theme = savedTheme || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+        document.documentElement.dataset.theme = theme
+        document.documentElement.style.colorScheme = theme
+      })()
+    </script>
+    <title>O Level Mathematics 4024 · Syllabus Explorer</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>
