@@ -43,4 +43,10 @@ frontend/.vite/
 Notes_data/
 parsed_notes/
 frontend/src/data/notes/*.json
+# The reviewed Probability bundles are application content and must be present
+# in production builds. Other generated note extracts remain local by default.
+!frontend/src/data/notes/8.1.json
+!frontend/src/data/notes/8.2.json
+!frontend/src/data/notes/8.3.json
+!frontend/src/data/notes/manifest.json
 Questions_data/

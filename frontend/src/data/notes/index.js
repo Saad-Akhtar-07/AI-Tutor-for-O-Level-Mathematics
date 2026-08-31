@@ -1,11 +1,14 @@
-// Load any locally generated subtopic bundles. The JSON content is intentionally
-// not committed because source-material redistribution rights can vary.
-const noteModules = import.meta.glob('./*.json', { eager: true, import: 'default' })
+// These reviewed Probability bundles are imported explicitly so they are
+// included reliably in local and production (Vercel) builds.
+import notes81 from './8.1.json'
+import notes82 from './8.2.json'
+import notes83 from './8.3.json'
 
-export const subtopicNotes = Object.values(noteModules).reduce((notes, data) => {
-  if (data?.subtopic_code) notes[data.subtopic_code] = data
-  return notes
-}, {})
+export const subtopicNotes = {
+  '8.1': notes81,
+  '8.2': notes82,
+  '8.3': notes83,
+}
 
 export function getNotesForSubtopic(code) {
   return subtopicNotes[code] || null

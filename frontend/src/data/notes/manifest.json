@@ -1,0 +1,23 @@
+{
+  "8.1": {
+    "title": "Introduction to probability",
+    "topic": "8",
+    "total_pages": 5,
+    "total_blocks": 42,
+    "file": "8.1.json"
+  },
+  "8.2": {
+    "title": "Relative and expected frequencies",
+    "topic": "8",
+    "total_pages": 3,
+    "total_blocks": 35,
+    "file": "8.2.json"
+  },
+  "8.3": {
+    "title": "Probability of combined events",
+    "topic": "8",
+    "total_pages": 19,
+    "total_blocks": 200,
+    "file": "8.3.json"
+  }
+}
