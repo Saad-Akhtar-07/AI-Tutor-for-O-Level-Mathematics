@@ -1017,3 +1017,810 @@ button, a, input, select { -webkit-tap-highlight-color: transparent; }
   .note-h1 { font-size: 23px; }
   .note-math-card { padding: 15px; }
 }
+
+/* Guided Probability practice workspace */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.practice-reader-main {
+  padding-left: clamp(26px, 3.5vw, 54px);
+  padding-right: clamp(26px, 3.5vw, 54px);
+}
+
+.practice-heading,
+.question-picker {
+  max-width: 1080px;
+}
+
+.practice-workspace {
+  width: min(1080px, 100%);
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(310px, .85fr);
+  gap: 22px;
+  align-items: start;
+}
+
+.practice-question-column { min-width: 0; }
+.practice-workspace .exam-question,
+.practice-workspace .practice-pagination { max-width: none; }
+
+.question-part {
+  position: relative;
+  scroll-margin-top: calc(var(--header-height) + 24px);
+}
+
+.question-part::before {
+  content: "";
+  position: absolute;
+  top: 28px;
+  bottom: 28px;
+  left: -32px;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: transparent;
+  transition: background-color 160ms ease;
+}
+
+.question-part.is-active::before { background: var(--accent); }
+
+.answer-composer {
+  margin-top: 22px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--background);
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.answer-composer:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 13%, transparent);
+}
+
+.answer-composer-heading {
+  min-height: 42px;
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--border-subtle);
+  background: var(--surface-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.answer-composer-heading label {
+  color: var(--primary);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.answer-composer-heading span {
+  color: var(--text-tertiary);
+  font-size: 11px;
+}
+
+.answer-entry {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+}
+
+.answer-entry textarea {
+  width: 100%;
+  min-height: 116px;
+  padding: 15px 16px;
+  border: 0;
+  outline: 0;
+  resize: vertical;
+  color: var(--text-primary);
+  background: var(--surface);
+  font: inherit;
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+.answer-entry textarea::placeholder { color: var(--text-tertiary); }
+
+.answer-suffix {
+  padding: 0 14px 16px 0;
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.maths-toolbar {
+  min-height: 62px;
+  padding: 8px 12px;
+  border-top: 1px solid var(--border-subtle);
+  background: var(--surface-subtle);
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  column-gap: 11px;
+  row-gap: 5px;
+}
+
+.maths-toolbar > span {
+  color: var(--text-tertiary);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.maths-toolbar > div {
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.maths-toolbar button {
+  flex: 0 0 auto;
+  min-width: 33px;
+  height: 31px;
+  padding: 0 7px;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  color: var(--primary);
+  background: transparent;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.maths-toolbar button:hover {
+  border-color: var(--border);
+  color: var(--accent);
+  background: var(--surface);
+}
+
+.maths-toolbar small {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: var(--text-tertiary);
+  font-size: 10px;
+  line-height: 1.35;
+}
+
+.question-help-row {
+  margin-top: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.tutor-actions { display: flex; flex-wrap: wrap; gap: 7px; }
+
+.hint-button,
+.check-ai-button {
+  min-height: 40px;
+  padding: 0 13px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.hint-button {
+  color: var(--primary);
+  background: var(--surface);
+}
+
+.hint-button:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.check-ai-button {
+  border-color: var(--accent);
+  color: var(--surface);
+  background: var(--accent);
+}
+
+.check-ai-button:hover { background: color-mix(in srgb, var(--accent) 86%, var(--primary)); }
+.question-help-row .mark-scheme-toggle { margin-top: 0; white-space: nowrap; }
+
+.ai-tutor-panel {
+  position: sticky;
+  top: calc(var(--header-height) + 18px);
+  height: calc(100vh - var(--header-height) - 36px);
+  height: calc(100dvh - var(--header-height) - 36px);
+  min-height: 0;
+  max-height: 740px;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--accent) 28%, var(--border));
+  border-radius: 12px;
+  background: var(--surface);
+  box-shadow: 0 12px 34px var(--overlay-shadow);
+  display: flex;
+  flex-direction: column;
+}
+
+.ai-tutor-header {
+  min-height: 72px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+  display: grid;
+  grid-template-columns: 42px 1fr;
+  gap: 11px;
+  align-items: center;
+}
+
+.ai-tutor-avatar {
+  width: 42px;
+  height: 42px;
+  border-radius: 11px;
+  color: var(--surface);
+  background: linear-gradient(145deg, var(--accent), var(--primary));
+  display: grid;
+  place-items: center;
+}
+
+.ai-tutor-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.ai-tutor-title h2 {
+  margin: 0;
+  color: var(--primary);
+  font-size: 16px;
+}
+
+.ai-tutor-title span {
+  padding: 3px 6px;
+  border-radius: 5px;
+  color: var(--text-secondary);
+  background: var(--surface-subtle);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+}
+
+.ai-tutor-header p {
+  margin: 2px 0 0;
+  color: var(--text-tertiary);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+}
+
+.ai-tutor-header i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #26a269;
+}
+
+.ai-tutor-context {
+  padding: 12px 16px 13px;
+  border-bottom: 1px solid var(--border);
+  background: color-mix(in srgb, var(--accent-soft) 45%, var(--surface));
+}
+
+.ai-tutor-context > span {
+  display: block;
+  color: var(--accent);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+}
+
+.ai-tutor-context strong {
+  display: block;
+  margin-top: 2px;
+  color: var(--primary);
+  font-size: 14px;
+}
+
+.ai-tutor-context p {
+  margin: 2px 0 0;
+  color: var(--text-secondary);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.ai-tutor-conversation {
+  min-height: 0;
+  flex: 1;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--accent-soft) 35%, var(--surface)) 0, var(--surface) 48%);
+  scrollbar-width: thin;
+}
+
+.tutor-welcome {
+  min-height: 100%;
+  padding: 42px 25px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.tutor-welcome > div {
+  width: 46px;
+  height: 46px;
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--border));
+  border-radius: 50%;
+  color: var(--accent);
+  background: var(--surface);
+  display: grid;
+  place-items: center;
+}
+
+.tutor-welcome h3 {
+  max-width: 250px;
+  margin: 15px 0 7px;
+  color: var(--primary);
+  font-size: 17px;
+  line-height: 1.35;
+}
+
+.tutor-welcome p {
+  max-width: 270px;
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.tutor-messages {
+  padding: 16px;
+  display: grid;
+  gap: 11px;
+}
+
+.tutor-message {
+  width: fit-content;
+  max-width: 90%;
+  padding: 10px 12px;
+  border-radius: 9px;
+}
+
+.tutor-message.assistant {
+  border: 1px solid var(--border);
+  border-bottom-left-radius: 3px;
+  background: var(--surface);
+}
+
+.tutor-message.student {
+  margin-left: auto;
+  border-bottom-right-radius: 3px;
+  color: var(--surface);
+  background: var(--accent);
+}
+
+.tutor-message > span {
+  display: block;
+  margin-bottom: 3px;
+  color: var(--accent);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+}
+
+.tutor-message p {
+  margin: 0;
+  color: inherit;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.tutor-message.assistant p { color: var(--text-primary); }
+
+.tutor-quick-actions {
+  flex: 0 0 auto;
+  padding: 10px 11px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.tutor-quick-actions button {
+  min-height: 32px;
+  padding: 0 9px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  color: var(--text-secondary);
+  background: var(--surface);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.tutor-quick-actions button:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.tutor-chat-form {
+  flex: 0 0 auto;
+  padding: 10px;
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+  display: grid;
+  grid-template-columns: 1fr 38px;
+  gap: 7px;
+}
+
+.tutor-chat-form input {
+  min-width: 0;
+  height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  color: var(--text-primary);
+  background: var(--background);
+  font-size: 13px;
+}
+
+.tutor-chat-form input:focus {
+  outline: 0;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
+.tutor-chat-form button {
+  width: 38px;
+  height: 40px;
+  padding: 0;
+  border: 0;
+  border-radius: 7px;
+  color: var(--surface);
+  background: var(--accent);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+
+.tutor-chat-form button:disabled {
+  opacity: .38;
+  cursor: not-allowed;
+}
+
+@media (max-width: 1279px) {
+  .practice-workspace { grid-template-columns: 1fr; }
+  .ai-tutor-panel {
+    position: static;
+    height: min(620px, calc(100dvh - var(--header-height) - 28px));
+    min-height: 0;
+    max-height: none;
+  }
+}
+
+@media (min-width: 1280px) and (max-height: 720px) {
+  .ai-tutor-header {
+    min-height: 60px;
+    padding: 9px 13px;
+    grid-template-columns: 38px 1fr;
+  }
+  .ai-tutor-avatar { width: 38px; height: 38px; }
+  .ai-tutor-context { padding: 8px 13px 9px; }
+  .tutor-welcome { padding: 18px 22px; }
+  .tutor-welcome > div { width: 40px; height: 40px; }
+  .tutor-welcome h3 { margin-top: 10px; font-size: 15px; }
+  .tutor-welcome p { font-size: 12px; }
+  .tutor-quick-actions { padding: 7px 9px; }
+  .tutor-chat-form { padding: 8px; }
+}
+
+@media (max-width: 767px) {
+  .practice-reader-main { padding-left: 20px; padding-right: 20px; }
+  .practice-heading { padding-bottom: 30px; }
+  .practice-heading h1 { font-size: 36px; }
+  .question-picker { margin-top: 22px; }
+  .question-part::before { left: -18px; }
+  .answer-composer-heading { align-items: flex-start; }
+  .maths-toolbar { grid-template-columns: 1fr; align-items: start; }
+  .maths-toolbar > div { width: 100%; overflow-x: visible; }
+  .maths-toolbar small { grid-column: 1; }
+  .question-help-row { align-items: stretch; flex-direction: column; }
+  .tutor-actions { display: grid; grid-template-columns: 1fr 1fr; }
+  .hint-button, .check-ai-button, .question-help-row .mark-scheme-toggle { justify-content: center; }
+  .ai-tutor-panel { height: min(570px, calc(100dvh - var(--header-height) - 24px)); }
+}
+
+@media (max-width: 430px) {
+  .practice-heading h1 { font-size: 32px; }
+  .exam-question-header h2 { font-size: 18px; }
+  .question-paragraph { font-size: 16px; }
+  .tutor-actions { grid-template-columns: 1fr; }
+  .practice-pagination button { padding: 0 9px; font-size: 12px; }
+}
+
+/* Student-facing notes lesson */
+.subtopic-notes-viewer { gap: 28px; }
+
+.notes-lesson-outline {
+  padding: 20px 22px 22px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  box-shadow: 0 6px 20px color-mix(in srgb, var(--overlay-shadow) 45%, transparent);
+}
+
+.lesson-outline-heading {
+  margin-bottom: 14px;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.lesson-outline-heading span {
+  color: var(--primary);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+.lesson-outline-heading p {
+  margin: 0;
+  color: var(--text-tertiary);
+  font-size: 12px;
+}
+
+.lesson-outline-links {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.lesson-outline-links a {
+  min-width: 0;
+  min-height: 43px;
+  padding: 8px 10px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 7px;
+  color: var(--text-secondary);
+  background: var(--surface-subtle);
+  display: grid;
+  grid-template-columns: 27px minmax(0, 1fr);
+  gap: 8px;
+  align-items: center;
+  transition: color 140ms ease, border-color 140ms ease, background-color 140ms ease;
+}
+
+.lesson-outline-links a:hover {
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+  color: var(--primary);
+  background: var(--accent-soft);
+}
+
+.lesson-outline-links a > span {
+  width: 27px;
+  height: 27px;
+  border-radius: 6px;
+  color: var(--accent);
+  background: var(--surface);
+  display: grid;
+  place-items: center;
+  font-size: 10px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.lesson-outline-links a > strong {
+  overflow: hidden;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.3;
+  text-overflow: ellipsis;
+}
+
+.note-source-section { gap: 14px; }
+
+.source-section-header {
+  padding: 17px 20px;
+  box-shadow: 0 4px 15px color-mix(in srgb, var(--overlay-shadow) 35%, transparent);
+}
+
+.source-part-label { margin-bottom: 3px; }
+.source-page-count { color: var(--accent); background: var(--accent-soft); }
+
+.note-lesson-content {
+  padding: 36px 40px 42px;
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  background: var(--surface);
+  box-shadow: 0 10px 28px color-mix(in srgb, var(--overlay-shadow) 60%, transparent);
+}
+
+.note-lesson-content > :first-child { margin-top: 0; }
+
+.note-lesson-content > .note-heading-wrapper.level-1:not(:first-child) {
+  margin-top: 54px;
+  padding-top: 34px;
+  border-top: 1px solid var(--border);
+}
+
+.note-lesson-content .note-heading-wrapper[id] {
+  scroll-margin-top: calc(var(--header-height) + 24px);
+}
+
+.note-lesson-content .note-paragraph,
+.note-lesson-content .note-list { max-width: 76ch; }
+
+@media (max-width: 767px) {
+  .notes-study-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .notes-study-stats > div {
+    min-width: 0;
+    min-height: 72px;
+    padding: 10px 6px;
+    border-right: 1px solid var(--border);
+    border-bottom: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 2px;
+    text-align: center;
+  }
+  .notes-study-stats > div:last-child { border-right: 0; }
+  .notes-study-stats strong { font-size: 17px; line-height: 1.1; }
+  .notes-study-stats span { font-size: 10px; line-height: 1.2; }
+  .lesson-outline-heading { align-items: flex-start; flex-direction: column; gap: 3px; }
+  .lesson-outline-links { grid-template-columns: 1fr; }
+  .source-section-header { padding: 16px 17px; align-items: center; }
+  .note-lesson-content { padding: 28px 19px 32px; }
+  .note-lesson-content > .note-heading-wrapper.level-1:not(:first-child) {
+    margin-top: 42px;
+    padding-top: 27px;
+  }
+}
+
+@media (max-width: 430px) {
+  .notes-lesson-outline { padding: 17px 15px; }
+  .source-page-count { display: none; }
+}
+
+/* Shared question workspace empty state */
+.question-picker.is-empty > div { align-items: center; }
+
+.question-picker-empty {
+  min-height: 34px;
+  padding: 0 11px;
+  border: 1px dashed var(--border);
+  border-radius: 6px;
+  color: var(--text-tertiary);
+  background: var(--surface-subtle);
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+}
+
+.question-number.empty {
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.empty-question-card { min-height: 520px; }
+
+.empty-question-body {
+  min-height: 430px;
+  padding: 58px 42px 48px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.empty-question-icon {
+  width: 50px;
+  height: 50px;
+  border: 1px solid color-mix(in srgb, var(--accent) 34%, var(--border));
+  border-radius: 12px;
+  color: var(--accent);
+  background: var(--accent-soft);
+  display: grid;
+  place-items: center;
+}
+
+.empty-question-kicker {
+  margin: 16px 0 5px;
+  color: var(--accent);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.empty-question-body h3 {
+  margin: 0;
+  color: var(--primary);
+  font-size: 21px;
+  line-height: 1.35;
+}
+
+.empty-question-body > p:not(.empty-question-kicker) {
+  max-width: 500px;
+  margin: 9px auto 0;
+  color: var(--text-secondary);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.empty-question-preview {
+  width: min(430px, 100%);
+  margin-top: 28px;
+  padding: 18px;
+  border: 1px dashed var(--border);
+  border-radius: 9px;
+  background: var(--background);
+  display: grid;
+  gap: 8px;
+}
+
+.empty-question-preview > span {
+  height: 8px;
+  border-radius: 4px;
+  background: var(--border-subtle);
+}
+
+.empty-question-preview > span:nth-child(1) { width: 86%; }
+.empty-question-preview > span:nth-child(2) { width: 68%; }
+.empty-question-preview > span:nth-child(3) { width: 76%; }
+
+.empty-question-preview > div {
+  height: 68px;
+  margin-top: 8px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 7px;
+  background: var(--surface);
+}
+
+.tutor-quick-actions button:disabled {
+  opacity: .42;
+  cursor: not-allowed;
+}
+
+.tutor-quick-actions button:disabled:hover {
+  border-color: var(--border);
+  color: var(--text-secondary);
+  background: var(--surface);
+}
+
+.tutor-chat-form input:disabled {
+  opacity: .7;
+  cursor: not-allowed;
+}
+
+@media (max-width: 767px) {
+  .empty-question-card { min-height: 0; }
+  .empty-question-body { min-height: 370px; padding: 42px 22px 36px; }
+  .empty-question-body h3 { font-size: 19px; }
+}

@@ -4,7 +4,7 @@ import SyllabusOverview from './pages/SyllabusOverview.jsx'
 import TopicPage from './pages/TopicPage.jsx'
 import SubtopicPage from './pages/SubtopicPage.jsx'
 import NotFound from './pages/NotFound.jsx'
-import ProbabilityPracticePage from './pages/ProbabilityPracticePage.jsx'
+import QuestionPracticePage from './pages/QuestionPracticePage.jsx'
 
 export default function App() {
   return (
@@ -14,7 +14,7 @@ export default function App() {
       <Routes>
         <Route path="/" element={<SyllabusOverview />} />
         <Route path="/topic/:topicNumber" element={<TopicPage />} />
-        <Route path="/topic/8/practice" element={<ProbabilityPracticePage />} />
+        <Route path="/topic/:topicNumber/practice" element={<QuestionPracticePage />} />
         <Route path="/topic/:topicNumber/:subtopicNumber" element={<SubtopicPage />} />
         <Route path="*" element={<NotFound />} />
       </Routes>

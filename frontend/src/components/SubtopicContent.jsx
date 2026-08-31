@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import SubtopicNotes from './notes/SubtopicNotes.jsx'
 import { getNotesForSubtopic } from '../data/notes/index.js'
+import { getQuestionCount } from '../data/questions/index.js'
 import { Link } from 'react-router-dom'
 
 function ContentList({ title, items, numbered = false }) {
@@ -28,6 +29,8 @@ function ContentList({ title, items, numbered = false }) {
 
 export default function SubtopicContent({ subtopic }) {
   const notesData = getNotesForSubtopic(subtopic.code)
+  const topicNumber = subtopic.code.split('.')[0]
+  const questionCount = getQuestionCount(topicNumber)
   const hasNotes = Boolean(notesData && notesData.sections?.length)
   const [activeTab, setActiveTab] = useState(hasNotes ? 'notes' : 'syllabus')
 
@@ -65,12 +68,10 @@ export default function SubtopicContent({ subtopic }) {
           >
             <span>Syllabus Spec</span>
           </button>
-          {subtopic.code.startsWith('8.') && (
-            <Link className="subtopic-tab-btn" to="/topic/8/practice">
-              <span>Practice Questions</span>
-              <span className="tab-count-badge">20</span>
-            </Link>
-          )}
+          <Link className="subtopic-tab-btn" to={`/topic/${topicNumber}/practice`}>
+            <span>Practice Questions</span>
+            <span className="tab-count-badge">{questionCount || 'Soon'}</span>
+          </Link>
         </div>
       </header>
 

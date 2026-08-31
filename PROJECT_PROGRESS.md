@@ -20,20 +20,23 @@ The hackathon MVP is intentionally limited to Probability so that one topic can 
 | Frontend foundation | Complete | React/Vite interface with responsive syllabus navigation, topic and subtopic pages, breadcrumbs, previous/next navigation, dark mode, and KaTeX rendering. |
 | Syllabus structure | Complete | 9 topics and 68 subtopics are represented. Probability is divided into 8.1, 8.2, and 8.3. |
 | Notes ingestion pipeline | Complete for the current Probability sources | PDFs are rendered as images, parsed by a vision model, validated with Pydantic, and saved as resumable structured JSON. The reported notes milestone was completed on 24 August 2026. |
-| Probability notes | Complete, redesigned, and production-ready | 27 parsed pages are bundled explicitly for Vercel: 8.1 has 5 pages/42 blocks, 8.2 has 3 pages/35 blocks, and 8.3 has 19 pages/200 blocks. The reading workspace includes source summaries, page navigation, content cards, callouts, tables, figures, and KaTeX mathematics. |
+| Probability notes | Complete, redesigned, and production-ready | 27 parsed pages are bundled explicitly for Vercel: 8.1 has 5 pages/42 blocks, 8.2 has 3 pages/35 blocks, and 8.3 has 19 pages/200 blocks. Learners see continuous study chapters with a concept-based lesson outline, worked-example and examiner-tip summaries, callouts, tables, figures, and KaTeX mathematics; PDF page boundaries remain internal metadata only. |
 | Practice-question sources | Collected, not parsed | `probability I.pdf` contains 20 numbered questions over 18 pages. Its mark scheme contains 17 pages and 115 total marks. |
 | Structured question bank | Complete for Probability I | All 20 questions, 53 assessable parts, source-page references, diagrams/tables, final answers, mark codes, and marking guidance are stored in reviewed JSON. The dataset validates to 115 marks. |
-| Interactive assessment | Frontend foundation complete | The Probability practice workspace provides question navigation, answer areas, reconstructed visuals, and a per-part mark-scheme reveal. Automatic marking, hints, and attempt history remain planned. |
+| Interactive assessment | Frontend mock complete | The Probability practice workspace now combines each question with a contextual AI-tutor panel, controlled answer drafts, compact maths-entry tools, hint/check actions, reconstructed visuals, and per-part mark-scheme reveal. Real model responses, automatic marking, persistence, and attempt history remain planned. |
 | Adaptive tutor AI | Planned | Learner state, evaluation, tutoring policy, persistence, and AI-quality evaluation remain future milestones. |
 
 ### Implementation update - 31 August 2026
 
 - The complete hand-reviewed Probability I dataset is now stored in `frontend/src/data/questions/probability.json`.
 - The question source and mark scheme were visually checked page by page before transcription.
-- The frontend route `/topic/8/practice` displays all 20 questions with 53 answer parts and a validated total of 115 marks.
+- The reusable frontend route `/topic/:topicNumber/practice` provides the same question-and-tutor workspace for every syllabus topic. Probability loads all 20 reviewed questions with 53 answer parts and 115 marks; topics without a question bank show an intentional empty state.
 - Tables, card sets, bag contents, Venn diagrams, and cumulative-frequency graph paper are reconstructed as responsive frontend elements.
 - Every assessable part includes an answer area and a button that reveals its answer and examiner marking points.
-- Probability overview and subtopic pages link directly to the practice workspace.
+- The question workspace now keeps the active question part beside an AI tutor panel, with demo hints, concept explanations, approach checks, and a chat composer.
+- Answer input now supports larger working areas, retained drafts while navigating, and a compact set of high-value maths symbols without the complexity of handwriting recognition, uploads, or a full equation keyboard.
+- Tutor responses are deliberately labelled as demo behavior; connecting them to approved notes, mark schemes, learner state, and a real model remains a backend milestone.
+- Every topic overview, subtopic tab, desktop sidebar, and mobile selector links to its topic practice workspace.
 - The production frontend build passes. Automatic answer marking, saved attempts, hints, and learner-state updates are the next milestone.
 
 ## 3. Probability content currently available

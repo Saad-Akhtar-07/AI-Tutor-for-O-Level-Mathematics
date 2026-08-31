@@ -1,7 +1,9 @@
 import { Link, useNavigate } from 'react-router-dom'
+import { getQuestionCount } from '../data/questions/index.js'
 
 export default function SyllabusSidebar({ topic, activeCode }) {
   const navigate = useNavigate()
+  const questionCount = getQuestionCount(topic.number)
   return (
     <>
       <div className="mobile-selector">
@@ -9,11 +11,11 @@ export default function SyllabusSidebar({ topic, activeCode }) {
         <select
           id="subtopic-select"
           value={activeCode || ''}
-          onChange={(event) => navigate(event.target.value === 'practice' ? '/topic/8/practice' : event.target.value ? `/topic/${topic.number}/${event.target.value}` : `/topic/${topic.number}`)}
+          onChange={(event) => navigate(event.target.value === 'practice' ? `/topic/${topic.number}/practice` : event.target.value ? `/topic/${topic.number}/${event.target.value}` : `/topic/${topic.number}`)}
         >
           <option value="">{topic.number.padStart(2, '0')} · {topic.title} overview</option>
           {topic.subtopics.map((subtopic) => <option key={subtopic.code} value={subtopic.code}>{subtopic.code} {subtopic.title}</option>)}
-          {topic.number === '8' && <option value="practice">Practice questions</option>}
+          <option value="practice">Practice questions</option>
         </select>
       </div>
 
@@ -34,12 +36,10 @@ export default function SyllabusSidebar({ topic, activeCode }) {
               {subtopic.title}
             </Link>
           ))}
-          {topic.number === '8' && (
-            <Link to="/topic/8/practice" className={activeCode === 'practice' ? 'active practice-sidebar-link' : 'practice-sidebar-link'} aria-current={activeCode === 'practice' ? 'page' : undefined}>
-              <span>20</span>
-              Practice questions
-            </Link>
-          )}
+          <Link to={`/topic/${topic.number}/practice`} className={activeCode === 'practice' ? 'active practice-sidebar-link' : 'practice-sidebar-link'} aria-current={activeCode === 'practice' ? 'page' : undefined}>
+            <span>{questionCount || '—'}</span>
+            Practice questions
+          </Link>
         </nav>
       </aside>
     </>

@@ -13,7 +13,7 @@ export function renderHeadingText(content) {
   return ''
 }
 
-export default function NoteBlockRenderer({ block, index = 0 }) {
+export default function NoteBlockRenderer({ block, index = 0, anchorId }) {
   if (!block) return null
 
   switch (block.type) {
@@ -27,6 +27,7 @@ export default function NoteBlockRenderer({ block, index = 0 }) {
 
       return (
         <div
+          id={anchorId}
           className={`note-heading-wrapper level-${block.level} ${
             isExaminerTip ? 'is-examiner-tip-header' : ''
           } ${isWorkedExample ? 'is-worked-example-header' : ''} ${
