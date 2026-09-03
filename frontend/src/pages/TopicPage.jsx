@@ -1,16 +1,25 @@
 import { ArrowRight } from 'lucide-react'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import Breadcrumbs from '../components/Breadcrumbs.jsx'
 import SyllabusSidebar from '../components/SyllabusSidebar.jsx'
-import { getQuestionCount } from '../data/questions/index.js'
+import { getQuestionCount } from '../api/content.js'
 import { syllabus } from '../data/syllabus.js'
 import NotFound from './NotFound.jsx'
 
 export default function TopicPage() {
   const { topicNumber } = useParams()
   const topic = syllabus.find((item) => item.number === topicNumber)
-  const questionCount = getQuestionCount(topicNumber)
+  const [questionCount, setQuestionCount] = useState(0)
+
+  useEffect(() => {
+    let cancelled = false
+    if (!topic) return undefined
+    getQuestionCount(topicNumber)
+      .then((count) => { if (!cancelled) setQuestionCount(count) })
+      .catch(() => { if (!cancelled) setQuestionCount(0) })
+    return () => { cancelled = true }
+  }, [topic, topicNumber])
 
   useEffect(() => {
     if (topic) document.title = `${topic.number} ${topic.title} · Mathematics 4024`

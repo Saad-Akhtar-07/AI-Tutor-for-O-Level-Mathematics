@@ -43,8 +43,8 @@ frontend/.vite/
 Notes_data/
 parsed_notes/
 frontend/src/data/notes/*.json
-# The reviewed Probability bundles are application content and must be present
-# in production builds. Other generated note extracts remain local by default.
+# Reviewed Probability bundles are tracked as repeatable database seed inputs.
+# React does not import them into production bundles.
 !frontend/src/data/notes/8.1.json
 !frontend/src/data/notes/8.2.json
 !frontend/src/data/notes/8.3.json

@@ -21,7 +21,7 @@ This repository currently provides the content and interface foundation:
 - Resumable extraction with retry handling, atomic progress saves, failure reporting, and configurable model selection through OpenRouter.
 - A frontend renderer for structured study notes and KaTeX mathematical notation.
 
-The adaptive learner model, tutoring-policy engine, interactive assessment loop, persistence layer, and AI evaluation harness are the next implementation milestones.
+The practice workspace now persists typed working and photographed solutions in PostgreSQL through an anonymous learner session. The adaptive learner model, tutoring-policy engine, and AI evaluation harness remain the next implementation milestones.
 
 ## Architecture
 
@@ -33,6 +33,9 @@ PDF renderer -> Vision extraction -> Pydantic validation -> Structured JSON
                                                             |
                                                             v
 React syllabus and study-note interface              [implemented]
+                                                            |
+                                                            v
+Typed/image response storage                         [implemented]
                                                             |
                                                             v
 Learner state -> Adaptive policy -> Tutor LLM -> Evaluator  [planned]
@@ -61,6 +64,84 @@ Create a production build with:
 cd frontend
 npm run build
 ```
+
+## Set up PostgreSQL and run the content API
+
+The current backend milestone stores the reviewed Probability questions, answers,
+marking points, and notes in PostgreSQL. PostgreSQL 18 is configured locally on
+port `5433`.
+
+Create the backend's own virtual environment and install only its dependencies:
+
+```powershell
+python -m venv backend/.venv
+.\backend\.venv\Scripts\python.exe -m pip install -r backend/requirements-dev.txt
+```
+
+Run the one-time setup from a normal terminal. It securely prompts for the
+existing `postgres` administrator password and a new password for the project
+role; passwords are not echoed:
+
+```powershell
+.\backend\.venv\Scripts\python.exe scripts/setup_database.py
+```
+
+The setup creates only these local PostgreSQL objects:
+
+- role: `ai_tutor_app`
+- database: `ai_tutor`
+- schema tables for topics, subtopics, question collections, questions,
+  question parts, marking points, note documents, learner sessions, typed
+  responses, and solution-image attachments
+
+It then imports the existing Probability content, creates the learner-response
+tables, and writes `DATABASE_URL` to
+the Git-ignored `backend/.env` file. The command is safe to run again: schema migrations
+and content imports are idempotent.
+
+Start the API from the project root:
+
+```powershell
+backend\start.cmd
+```
+
+In a second terminal, start the frontend:
+
+```powershell
+cd frontend
+npm.cmd run dev
+```
+
+Vite proxies `/api` to `http://localhost:8000` during local development. Useful
+checks are `http://localhost:8000/api/v1/health`,
+`http://localhost:8000/api/v1/topics/8/question-summary`,
+`http://localhost:8000/api/v1/topics/8/questions`, and
+`http://localhost:8000/api/v1/subtopics/8.1/notes`.
+
+Run the live backend regression test with:
+
+```powershell
+.\backend\.venv\Scripts\python.exe -m pytest backend/tests -q
+```
+
+Before starting a new feature, run every local release gate together:
+
+```powershell
+.\verify.cmd
+```
+
+### Why this first schema is intentionally small
+
+Fields that need relationships or filtering are relational: a topic has
+subtopics and question collections; a question has ordered parts; each part has
+ordered marking points. Renderer-specific blocks (paragraphs, tables, Venn
+diagrams, figures, and note sections) stay in PostgreSQL `JSONB`. This avoids an
+over-complicated first schema while retaining the existing structured content.
+
+The checked-in Probability JSON files currently act only as repeatable seed
+inputs. React no longer imports them and reads runtime content through the
+versioned API instead. Public API responses are contract-checked, and database
+connections are served through a bounded PostgreSQL connection pool.
 
 ## Run the note-ingestion pipeline
 

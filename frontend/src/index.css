@@ -1195,6 +1195,138 @@ button, a, input, select { -webkit-tap-highlight-color: transparent; }
   line-height: 1.35;
 }
 
+.solution-input-footer {
+  min-height: 52px;
+  padding: 9px 12px;
+  border-top: 1px solid var(--border-subtle);
+  background: var(--surface);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.solution-input-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.attach-solution-button,
+.save-solution-button {
+  min-height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--primary);
+  background: var(--surface);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.attach-solution-button:hover,
+.save-solution-button:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.attach-solution-button:disabled,
+.save-solution-button:disabled {
+  opacity: .55;
+  cursor: wait;
+}
+
+.solution-save-status {
+  color: var(--text-tertiary);
+  font-size: 10px;
+  line-height: 1.35;
+  text-align: right;
+}
+
+.solution-save-status.is-error { color: #b42318; }
+
+.solution-attachments {
+  padding: 11px 12px;
+  border-top: 1px solid var(--border-subtle);
+  background: var(--surface-subtle);
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 9px;
+}
+
+.solution-attachments figure {
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--surface);
+}
+
+.solution-attachments img {
+  width: 100%;
+  height: 94px;
+  object-fit: cover;
+  display: block;
+}
+
+.solution-attachments figcaption {
+  min-width: 0;
+  padding: 5px 5px 5px 7px;
+  border-top: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.solution-attachments figcaption span {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  color: var(--text-secondary);
+  font-size: 9px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.solution-attachments figcaption button {
+  width: 25px;
+  height: 25px;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  color: var(--text-tertiary);
+  background: transparent;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+
+.solution-attachments figcaption button:hover {
+  color: #b42318;
+  background: color-mix(in srgb, #b42318 9%, transparent);
+}
+
+.response-load-warning {
+  margin: -18px 0 22px;
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, #b42318 28%, var(--border));
+  border-radius: 7px;
+  color: #b42318;
+  background: color-mix(in srgb, #b42318 6%, var(--surface));
+  font-size: 12px;
+}
+
+.spin { animation: input-spinner 850ms linear infinite; }
+
+@keyframes input-spinner { to { transform: rotate(360deg); } }
+
 .question-help-row {
   margin-top: 12px;
   display: flex;
@@ -1546,6 +1678,9 @@ button, a, input, select { -webkit-tap-highlight-color: transparent; }
   .maths-toolbar { grid-template-columns: 1fr; align-items: start; }
   .maths-toolbar > div { width: 100%; overflow-x: visible; }
   .maths-toolbar small { grid-column: 1; }
+  .solution-input-footer { align-items: flex-start; flex-direction: column; }
+  .solution-save-status { text-align: left; }
+  .solution-attachments { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .question-help-row { align-items: stretch; flex-direction: column; }
   .tutor-actions { display: grid; grid-template-columns: 1fr 1fr; }
   .hint-button, .check-ai-button, .question-help-row .mark-scheme-toggle { justify-content: center; }

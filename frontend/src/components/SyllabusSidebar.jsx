@@ -1,9 +1,18 @@
+import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { getQuestionCount } from '../data/questions/index.js'
+import { getQuestionCount } from '../api/content.js'
 
 export default function SyllabusSidebar({ topic, activeCode }) {
   const navigate = useNavigate()
-  const questionCount = getQuestionCount(topic.number)
+  const [questionCount, setQuestionCount] = useState(0)
+
+  useEffect(() => {
+    let cancelled = false
+    getQuestionCount(topic.number)
+      .then((count) => { if (!cancelled) setQuestionCount(count) })
+      .catch(() => { if (!cancelled) setQuestionCount(0) })
+    return () => { cancelled = true }
+  }, [topic.number])
   return (
     <>
       <div className="mobile-selector">

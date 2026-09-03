@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import SubtopicNotes from './notes/SubtopicNotes.jsx'
-import { getNotesForSubtopic } from '../data/notes/index.js'
-import { getQuestionCount } from '../data/questions/index.js'
+import { getNotesForSubtopic, getQuestionCount } from '../api/content.js'
 import { Link } from 'react-router-dom'
 
 function ContentList({ title, items, numbered = false }) {
@@ -28,15 +27,39 @@ function ContentList({ title, items, numbered = false }) {
 }
 
 export default function SubtopicContent({ subtopic }) {
-  const notesData = getNotesForSubtopic(subtopic.code)
   const topicNumber = subtopic.code.split('.')[0]
-  const questionCount = getQuestionCount(topicNumber)
+  const [notesData, setNotesData] = useState(null)
+  const [questionCount, setQuestionCount] = useState(0)
+  const [notesLoading, setNotesLoading] = useState(true)
+  const [notesError, setNotesError] = useState('')
   const hasNotes = Boolean(notesData && notesData.sections?.length)
-  const [activeTab, setActiveTab] = useState(hasNotes ? 'notes' : 'syllabus')
+  const [activeTab, setActiveTab] = useState('notes')
 
   useEffect(() => {
-    setActiveTab(hasNotes ? 'notes' : 'syllabus')
-  }, [subtopic.code, hasNotes])
+    let cancelled = false
+    setNotesData(null)
+    setNotesLoading(true)
+    setNotesError('')
+    Promise.all([
+      getNotesForSubtopic(subtopic.code),
+      getQuestionCount(topicNumber).catch(() => 0),
+    ])
+      .then(([notes, count]) => {
+        if (cancelled) return
+        setNotesData(notes)
+        setQuestionCount(count)
+        setActiveTab(notes?.sections?.length ? 'notes' : 'syllabus')
+      })
+      .catch((error) => {
+        if (cancelled) return
+        setNotesError(error.message)
+        setActiveTab('syllabus')
+      })
+      .finally(() => {
+        if (!cancelled) setNotesLoading(false)
+      })
+    return () => { cancelled = true }
+  }, [subtopic.code, topicNumber])
 
   return (
     <article className="subtopic-content">
@@ -53,9 +76,9 @@ export default function SubtopicContent({ subtopic }) {
             onClick={() => setActiveTab('notes')}
           >
             <span>Revision Notes</span>
-            {hasNotes && (
+            {(hasNotes || notesLoading) && (
               <span className="tab-count-badge">
-                {notesData.sections.reduce((acc, s) => acc + s.pages.length, 0)} pages
+                {notesLoading ? '…' : `${notesData.sections.reduce((acc, s) => acc + s.pages.length, 0)} pages`}
               </span>
             )}
           </button>
@@ -79,6 +102,7 @@ export default function SubtopicContent({ subtopic }) {
         <SubtopicNotes notesData={notesData} subtopic={subtopic} />
       ) : (
         <>
+          {notesError && <p role="status">Revision notes could not be loaded from the content API.</p>}
           <ContentList title="Learning outcomes" items={subtopic.outcomes} numbered />
           <ContentList title="Notes and examples" items={subtopic.notes} />
         </>

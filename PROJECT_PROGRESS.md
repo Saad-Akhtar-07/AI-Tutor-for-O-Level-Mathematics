@@ -1,7 +1,9 @@
 # AI O Level Mathematics Tutor - Project Progress
 
-Last updated: 31 August 2026  
-Hackathon scope: Cambridge O Level Mathematics (Syllabus D 4024)  
+Last updated: 1 September 2026
+
+Hackathon scope: Cambridge O Level Mathematics (Syllabus D 4024)
+
 Current MVP topic: Probability (Topic 8)
 
 ## 1. Product goal
@@ -23,8 +25,30 @@ The hackathon MVP is intentionally limited to Probability so that one topic can 
 | Probability notes | Complete, redesigned, and production-ready | 27 parsed pages are bundled explicitly for Vercel: 8.1 has 5 pages/42 blocks, 8.2 has 3 pages/35 blocks, and 8.3 has 19 pages/200 blocks. Learners see continuous study chapters with a concept-based lesson outline, worked-example and examiner-tip summaries, callouts, tables, figures, and KaTeX mathematics; PDF page boundaries remain internal metadata only. |
 | Practice-question sources | Collected, not parsed | `probability I.pdf` contains 20 numbered questions over 18 pages. Its mark scheme contains 17 pages and 115 total marks. |
 | Structured question bank | Complete for Probability I | All 20 questions, 53 assessable parts, source-page references, diagrams/tables, final answers, mark codes, and marking guidance are stored in reviewed JSON. The dataset validates to 115 marks. |
-| Interactive assessment | Frontend mock complete | The Probability practice workspace now combines each question with a contextual AI-tutor panel, controlled answer drafts, compact maths-entry tools, hint/check actions, reconstructed visuals, and per-part mark-scheme reveal. Real model responses, automatic marking, persistence, and attempt history remain planned. |
-| Adaptive tutor AI | Planned | Learner state, evaluation, tutoring policy, persistence, and AI-quality evaluation remain future milestones. |
+| Interactive assessment | Input and persistence complete | The Probability practice workspace accepts typed working and up to four photographed solution pages per part, auto-saves them through the API, restores work after refresh, and marks check requests as ready for review. Real model responses, automatic marking, and attempt history remain planned. |
+| Content database and API | Complete for current Probability content | PostgreSQL schema, repeatable migrations/seeding, and a modular FastAPI read API cover Probability topics/subtopics, 20 questions, 53 parts, 82 marking points, and 3 note documents. Direct API and Vite-proxy requests are verified against the local PostgreSQL 18 database. |
+| Adaptive tutor AI | Planned | Learner state, evaluation, tutoring policy, and AI-quality evaluation remain future milestones; its typed/image input boundary is now ready. |
+
+### Implementation update - 3 September 2026
+
+- Added anonymous learner sessions whose UUID is retained by the browser for the
+  hackathon MVP, without introducing premature account/authentication work.
+- Added PostgreSQL response records keyed to stable question-part IDs, including
+  typed working, draft/ready-for-review state, revision numbers, and timestamps.
+- Added image attachments with an 8 MB limit, a four-image limit per response,
+  dimensions, real detected MIME type, SHA-256 deduplication, and database-backed
+  content retrieval.
+- Image uploads are decoded, orientation-corrected, and re-encoded without EXIF
+  metadata before storage; only JPEG, PNG, and WebP are accepted.
+- The practice composer now auto-saves text after a short pause, supports manual
+  save, camera/gallery selection, previews, deletion, errors, and saved-state
+  feedback. Saved work is restored on refresh and across question navigation.
+- “Check with AI” now persists the complete response as `ready_for_review` before
+  the existing demo tutor runs, creating the correct boundary for the real AI
+  evaluator to replace later.
+- Extended the live integration test through session creation, validation,
+  saving, upload normalization/deduplication, retrieval, review readiness,
+  restoration, and deletion. The backend test and production frontend build pass.
 
 ### Implementation update - 31 August 2026
 
@@ -38,6 +62,25 @@ The hackathon MVP is intentionally limited to Probability so that one topic can 
 - Tutor responses are deliberately labelled as demo behavior; connecting them to approved notes, mark schemes, learner state, and a real model remains a backend milestone.
 - Every topic overview, subtopic tab, desktop sidebar, and mobile selector links to its topic practice workspace.
 - The production frontend build passes. Automatic answer marking, saved attempts, hints, and learner-state updates are the next milestone.
+
+### Implementation update - 1 September 2026
+
+- Added a minimal PostgreSQL content schema with relational topics, subtopics,
+  question collections, questions, ordered parts, and ordered marking points.
+- Kept renderer-oriented question and note blocks in `JSONB` so tables, diagrams,
+  LaTeX, and extracted page content can evolve without premature table sprawl.
+- Added an idempotent migration and Probability seed importer covering all 20
+  questions, 53 parts, 115 marks, 82 marking points, and notes for 8.1-8.3.
+- Added a FastAPI backend with health, topic-question, and subtopic-note endpoints.
+- Replaced React's static content imports with cached API requests and explicit
+  loading, missing-content, and backend-unavailable states.
+- Added a secure local setup script for the `ai_tutor_app` role and `ai_tutor`
+  database on PostgreSQL 18 port 5433. It writes the URL only to Git-ignored `backend/.env`.
+- Separated the backend into its own `.venv`, `.env`, dependency manifest,
+  route layer, and repository layer; verified the complete React-to-API-to-database path.
+- Hardened the full-stack boundary with `/api/v1` routes, Pydantic response
+  contracts, a bounded PostgreSQL connection pool, stable global question-part
+  IDs, request timeouts, pinned frontend dependency ranges, and a live API test.
 
 ## 3. Probability content currently available
 

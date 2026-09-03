@@ -1,6 +1,7 @@
 import {
   BookOpenCheck,
   Bot,
+  Camera,
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
@@ -8,14 +9,24 @@ import {
   Eye,
   EyeOff,
   Lightbulb,
+  LoaderCircle,
+  Save,
   Send,
   Sparkles,
+  Trash2,
 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import InlineContent from '../components/notes/InlineContent.jsx'
 import SyllabusSidebar from '../components/SyllabusSidebar.jsx'
-import { getQuestionBank } from '../data/questions/index.js'
+import { getQuestionBank } from '../api/content.js'
+import {
+  attachmentContentUrl,
+  getStudentResponses,
+  removeSolutionImage,
+  saveStudentResponse,
+  uploadSolutionImage,
+} from '../api/submissions.js'
 import { syllabus } from '../data/syllabus.js'
 import NotFound from './NotFound.jsx'
 
@@ -60,8 +71,9 @@ function QuestionBlock({ block }) {
   return null
 }
 
-function AnswerComposer({ part, value, onChange }) {
+function AnswerComposer({ part, value, attachments, saveState, saveMessage, onChange, onSave, onUpload, onRemoveAttachment }) {
   const textareaRef = useRef(null)
+  const fileInputRef = useRef(null)
 
   const insertMaths = (tool) => {
     const textarea = textareaRef.current
@@ -102,7 +114,7 @@ function AnswerComposer({ part, value, onChange }) {
       <span>{value.trim() ? 'Draft added' : 'Show your method'}</span>
     </div>
     <div className="answer-entry">
-      <textarea ref={textareaRef} id={`${part.id}-answer`} rows="4" spellCheck="false" value={value} onChange={(event) => onChange(event.target.value)} placeholder="Write each step here…" />
+      <textarea ref={textareaRef} id={`${part.id}-answer`} rows="4" maxLength="20000" spellCheck="false" value={value} onChange={(event) => onChange(event.target.value)} placeholder="Write each step here…" />
       {part.answer_suffix && <span className="answer-suffix">{part.answer_suffix}</span>}
     </div>
     <div className="maths-toolbar" aria-label="Maths input tools">
@@ -110,17 +122,50 @@ function AnswerComposer({ part, value, onChange }) {
       <div>{mathsTools.map((tool) => <button type="button" key={tool.id} title={tool.name} aria-label={tool.name} onClick={() => insertMaths(tool)}>{tool.label}</button>)}</div>
       <small>Keyboard: / for fractions · ^ for powers</small>
     </div>
+    <div className="solution-input-footer">
+      <div className="solution-input-actions">
+        <input
+          ref={fileInputRef}
+          className="sr-only"
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          multiple
+          onChange={(event) => {
+            const files = Array.from(event.target.files || [])
+            if (files.length) onUpload(files)
+            event.target.value = ''
+          }}
+        />
+        <button type="button" className="attach-solution-button" onClick={() => fileInputRef.current?.click()} disabled={saveState === 'uploading'}>
+          {saveState === 'uploading' ? <LoaderCircle className="spin" size={16} /> : <Camera size={16} />}
+          Add solution photo
+        </button>
+        <button type="button" className="save-solution-button" onClick={onSave} disabled={saveState === 'saving' || saveState === 'uploading'}>
+          {saveState === 'saving' ? <LoaderCircle className="spin" size={16} /> : <Save size={16} />}
+          Save work
+        </button>
+      </div>
+      <span className={`solution-save-status ${saveState === 'error' ? 'is-error' : ''}`} role={saveState === 'error' ? 'alert' : 'status'}>
+        {saveMessage || (saveState === 'saved' ? 'Saved securely' : saveState === 'saving' ? 'Saving…' : 'Text auto-saves after you pause')}
+      </span>
+    </div>
+    {attachments.length > 0 && <div className="solution-attachments" aria-label="Attached solution images">
+      {attachments.map((attachment) => <figure key={attachment.id}>
+        <img src={attachmentContentUrl(attachment.content_url)} alt={`Attached working: ${attachment.original_filename}`} />
+        <figcaption><span title={attachment.original_filename}>{attachment.original_filename}</span><button type="button" aria-label={`Remove ${attachment.original_filename}`} onClick={() => onRemoveAttachment(attachment.id)}><Trash2 size={14} /></button></figcaption>
+      </figure>)}
+    </div>}
   </div>
 }
 
-function QuestionPart({ part, answer, isActive, onAnswerChange, onActivate, onTutorRequest }) {
+function QuestionPart({ part, answer, attachments, saveState, saveMessage, isActive, onAnswerChange, onSave, onUpload, onRemoveAttachment, onActivate, onTutorRequest }) {
   const [showScheme, setShowScheme] = useState(false)
   const schemeId = `${part.id}-scheme`
 
   return <section className={`question-part ${isActive ? 'is-active' : ''}`} onFocusCapture={onActivate}>
     <div className="question-part-heading"><span>{part.label}</span><strong>{part.marks} {part.marks === 1 ? 'mark' : 'marks'}</strong></div>
     <div className="question-part-prompt">{part.prompt.map((block, index) => <QuestionBlock block={block} key={index} />)}</div>
-    <AnswerComposer part={part} value={answer} onChange={onAnswerChange} />
+    <AnswerComposer part={part} value={answer} attachments={attachments} saveState={saveState} saveMessage={saveMessage} onChange={onAnswerChange} onSave={onSave} onUpload={onUpload} onRemoveAttachment={onRemoveAttachment} />
     <div className="question-help-row">
       <div className="tutor-actions">
         <button type="button" className="hint-button" onClick={() => onTutorRequest('hint', part, answer)}><Lightbulb size={17} /> Give me a hint</button>
@@ -246,7 +291,17 @@ function createEmptyQuestion(topic) {
   }
 }
 
-function EmptyQuestionCard({ topic }) {
+function EmptyQuestionCard({ topic, loading = false, error = '' }) {
+  const title = loading
+    ? 'Loading practice questions…'
+    : error
+      ? 'The content API is unavailable.'
+      : `The workspace is ready for ${topic.title}.`
+  const description = loading
+    ? 'Fetching the reviewed question bank from PostgreSQL.'
+    : error
+      ? 'Start the backend API and confirm PostgreSQL is running, then refresh this page.'
+      : 'Reviewed questions for this topic are being prepared. Once available, you will be able to write answers, ask for hints and check your work here.'
   return <article className="exam-question empty-question-card">
     <header className="exam-question-header">
       <div className="question-number empty"><CircleDashed size={22} /></div>
@@ -255,9 +310,9 @@ function EmptyQuestionCard({ topic }) {
     </header>
     <div className="empty-question-body">
       <div className="empty-question-icon"><BookOpenCheck size={25} /></div>
-      <p className="empty-question-kicker">Practice set coming next</p>
-      <h3>The workspace is ready for {topic.title}.</h3>
-      <p>Reviewed questions for this topic are being prepared. Once available, you will be able to write answers, ask for hints and check your work here.</p>
+      <p className="empty-question-kicker">{loading ? 'Connecting to content library' : error ? 'Connection needed' : 'Practice set coming next'}</p>
+      <h3>{title}</h3>
+      <p>{description}</p>
       <div className="empty-question-preview" aria-hidden="true">
         <span />
         <span />
@@ -271,22 +326,83 @@ function EmptyQuestionCard({ topic }) {
 export default function QuestionPracticePage() {
   const { topicNumber } = useParams()
   const topic = syllabus.find((item) => item.number === topicNumber)
-  const questionBank = topic ? getQuestionBank(topic.number) : null
+  const [questionBank, setQuestionBank] = useState(null)
+  const [isLoading, setIsLoading] = useState(Boolean(topic))
+  const [loadError, setLoadError] = useState('')
   const questions = questionBank?.questions || []
   const hasQuestions = questions.length > 0
   const emptyQuestion = createEmptyQuestion(topic || {})
   const [questionIndex, setQuestionIndex] = useState(0)
   const [answers, setAnswers] = useState({})
+  const [attachments, setAttachments] = useState({})
+  const [saveStates, setSaveStates] = useState({})
+  const [saveMessages, setSaveMessages] = useState({})
+  const [responseLoadError, setResponseLoadError] = useState('')
   const [activePartId, setActivePartId] = useState('')
   const [tutorRequest, setTutorRequest] = useState(null)
+  const answersRef = useRef({})
+  const saveTimersRef = useRef(new Map())
+  const saveVersionsRef = useRef(new Map())
   const question = hasQuestions ? (questions[questionIndex] || questions[0]) : emptyQuestion
   const activePart = question.parts.find((part) => part.id === activePartId) || question.parts[0]
 
   useEffect(() => {
+    let cancelled = false
+    if (!topic) return undefined
+    setIsLoading(true)
+    setLoadError('')
+    setQuestionBank(null)
+    getQuestionBank(topic.number)
+      .then((bank) => {
+        if (!cancelled) setQuestionBank(bank)
+      })
+      .catch((error) => {
+        if (!cancelled) setLoadError(error.message)
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoading(false)
+      })
+    return () => { cancelled = true }
+  }, [topic])
+
+  useEffect(() => {
     setQuestionIndex(0)
     setAnswers({})
+    answersRef.current = {}
+    setAttachments({})
+    setSaveStates({})
+    setSaveMessages({})
+    setResponseLoadError('')
     setActivePartId('')
     setTutorRequest(null)
+    saveTimersRef.current.forEach((timer) => clearTimeout(timer))
+    saveTimersRef.current.clear()
+    if (!topic) return undefined
+    let cancelled = false
+    getStudentResponses(topic.number)
+      .then((responses) => {
+        if (cancelled) return
+        const restoredAnswers = {}
+        const restoredAttachments = {}
+        const restoredStates = {}
+        responses.forEach((response) => {
+          restoredAnswers[response.question_part_id] = response.typed_work
+          restoredAttachments[response.question_part_id] = response.attachments
+          restoredStates[response.question_part_id] = 'saved'
+        })
+        answersRef.current = restoredAnswers
+        setAnswers(restoredAnswers)
+        setAttachments(restoredAttachments)
+        setSaveStates(restoredStates)
+      })
+      .catch((error) => {
+        if (!cancelled) setResponseLoadError(error.message)
+      })
+    return () => {
+      cancelled = true
+      saveTimersRef.current.forEach((timer) => clearTimeout(timer))
+      saveTimersRef.current.clear()
+    }
   }, [topicNumber])
 
   useEffect(() => {
@@ -308,15 +424,113 @@ export default function QuestionPracticePage() {
     setTutorRequest(null)
   }
 
-  const askTutor = (type, part, answer) => {
+  const persistAnswer = async (partId, value, status = 'draft') => {
+    const version = (saveVersionsRef.current.get(partId) || 0) + 1
+    saveVersionsRef.current.set(partId, version)
+    setSaveStates((current) => ({ ...current, [partId]: 'saving' }))
+    setSaveMessages((current) => ({ ...current, [partId]: '' }))
+    try {
+      const response = await saveStudentResponse(partId, value, status)
+      setAttachments((current) => ({ ...current, [partId]: response.attachments }))
+      if (saveVersionsRef.current.get(partId) === version) {
+        setSaveStates((current) => ({ ...current, [partId]: 'saved' }))
+        setSaveMessages((current) => ({
+          ...current,
+          [partId]: status === 'ready_for_review' ? 'Saved and ready for tutor review' : 'Saved securely',
+        }))
+      }
+      return response
+    } catch (error) {
+      if (saveVersionsRef.current.get(partId) === version) {
+        setSaveStates((current) => ({ ...current, [partId]: 'error' }))
+        setSaveMessages((current) => ({ ...current, [partId]: error.message }))
+      }
+      throw error
+    }
+  }
+
+  const changeAnswer = (partId, value) => {
+    answersRef.current = { ...answersRef.current, [partId]: value }
+    setAnswers(answersRef.current)
+    setSaveStates((current) => ({ ...current, [partId]: 'saving' }))
+    setSaveMessages((current) => ({ ...current, [partId]: '' }))
+    clearTimeout(saveTimersRef.current.get(partId))
+    const timer = setTimeout(() => {
+      saveTimersRef.current.delete(partId)
+      persistAnswer(partId, value).catch(() => {})
+    }, 800)
+    saveTimersRef.current.set(partId, timer)
+  }
+
+  const saveNow = (part) => {
+    clearTimeout(saveTimersRef.current.get(part.id))
+    saveTimersRef.current.delete(part.id)
+    persistAnswer(part.id, answersRef.current[part.id] || '').catch(() => {})
+  }
+
+  const uploadImages = async (part, files) => {
+    const currentAttachments = attachments[part.id] || []
+    if (currentAttachments.length + files.length > 4) {
+      setSaveStates((current) => ({ ...current, [part.id]: 'error' }))
+      setSaveMessages((current) => ({ ...current, [part.id]: 'You can attach up to 4 images to one answer.' }))
+      return
+    }
+    clearTimeout(saveTimersRef.current.get(part.id))
+    saveTimersRef.current.delete(part.id)
+    try {
+      await persistAnswer(part.id, answersRef.current[part.id] || '')
+      setSaveStates((current) => ({ ...current, [part.id]: 'uploading' }))
+      setSaveMessages((current) => ({ ...current, [part.id]: 'Uploading solution image…' }))
+      let response
+      for (const file of files) response = await uploadSolutionImage(part.id, file)
+      setAttachments((current) => ({ ...current, [part.id]: response.attachments }))
+      setSaveStates((current) => ({ ...current, [part.id]: 'saved' }))
+      setSaveMessages((current) => ({ ...current, [part.id]: `${response.attachments.length} solution image${response.attachments.length === 1 ? '' : 's'} saved` }))
+    } catch (error) {
+      setSaveStates((current) => ({ ...current, [part.id]: 'error' }))
+      setSaveMessages((current) => ({ ...current, [part.id]: error.message }))
+    }
+  }
+
+  const deleteImage = async (part, attachmentId) => {
+    setSaveStates((current) => ({ ...current, [part.id]: 'saving' }))
+    setSaveMessages((current) => ({ ...current, [part.id]: 'Removing image…' }))
+    try {
+      await removeSolutionImage(attachmentId)
+      setAttachments((current) => ({
+        ...current,
+        [part.id]: (current[part.id] || []).filter((item) => item.id !== attachmentId),
+      }))
+      setSaveStates((current) => ({ ...current, [part.id]: 'saved' }))
+      setSaveMessages((current) => ({ ...current, [part.id]: 'Image removed' }))
+    } catch (error) {
+      setSaveStates((current) => ({ ...current, [part.id]: 'error' }))
+      setSaveMessages((current) => ({ ...current, [part.id]: error.message }))
+    }
+  }
+
+  const askTutor = async (type, part, answer) => {
     if (!hasQuestions) return
     setActivePartId(part.id)
+    if (type === 'check') {
+      clearTimeout(saveTimersRef.current.get(part.id))
+      saveTimersRef.current.delete(part.id)
+      try {
+        await persistAnswer(part.id, answer, 'ready_for_review')
+      } catch {
+        return
+      }
+    }
     setTutorRequest({ id: Date.now(), type, part, answer })
   }
 
   const summary = hasQuestions
     ? `${questions.length} reviewed questions · ${questionBank.total_marks} marks · Your tutor stays with the active part`
-    : 'Question workspace ready · Reviewed questions have not been added yet'
+    : isLoading
+      ? 'Loading reviewed questions from the content library'
+      : loadError
+        ? 'Could not reach the content library'
+        : 'Question workspace ready · Reviewed questions have not been added yet'
 
   return <main className="reader-shell" id="main-content" tabIndex="-1">
     <SyllabusSidebar topic={topic} activeCode="practice" />
@@ -325,18 +539,19 @@ export default function QuestionPracticePage() {
       <header className="practice-heading"><div><p>TOPIC {topic.number} - {topic.title.toUpperCase()}</p><h1>Practice with your AI tutor</h1><span>{summary}</span></div><BookOpenCheck size={38} /></header>
       <nav className={`question-picker ${hasQuestions ? '' : 'is-empty'}`} aria-label="Choose a question">
         <span>Question</span>
-        <div>{hasQuestions ? questions.map((item, index) => <button type="button" key={item.id} className={index === questionIndex ? 'active' : ''} aria-current={index === questionIndex ? 'step' : undefined} onClick={() => moveTo(index)}>{item.number}</button>) : <span className="question-picker-empty"><CircleDashed size={16} /> No reviewed questions available</span>}</div>
+        <div>{hasQuestions ? questions.map((item, index) => <button type="button" key={item.id} className={index === questionIndex ? 'active' : ''} aria-current={index === questionIndex ? 'step' : undefined} onClick={() => moveTo(index)}>{item.number}</button>) : <span className="question-picker-empty"><CircleDashed size={16} /> {isLoading ? 'Loading questions…' : loadError ? 'Content API unavailable' : 'No reviewed questions available'}</span>}</div>
       </nav>
+      {responseLoadError && <div className="response-load-warning" role="alert">Saved work could not be restored: {responseLoadError}</div>}
       <div className="practice-workspace">
         <div className="practice-question-column">
           {hasQuestions ? <>
             <article className="exam-question" key={question.id}>
               <header className="exam-question-header"><div className="question-number">{String(question.number).padStart(2, '0')}</div><div><p>{question.syllabus_codes.map((code) => `Syllabus ${code}`).join(' - ')}</p><h2>{question.title}</h2></div><strong>{question.total_marks} marks</strong></header>
               <div className="question-stimulus">{question.prompt.map((block, index) => <QuestionBlock block={block} key={index} />)}</div>
-              <div className="question-parts">{question.parts.map((part) => <QuestionPart part={part} answer={answers[part.id] || ''} isActive={part.id === activePart.id} onAnswerChange={(value) => setAnswers((current) => ({ ...current, [part.id]: value }))} onActivate={() => setActivePartId(part.id)} onTutorRequest={askTutor} key={part.id} />)}</div>
+              <div className="question-parts">{question.parts.map((part) => <QuestionPart part={part} answer={answers[part.id] || ''} attachments={attachments[part.id] || []} saveState={saveStates[part.id] || 'idle'} saveMessage={saveMessages[part.id] || ''} isActive={part.id === activePart.id} onAnswerChange={(value) => changeAnswer(part.id, value)} onSave={() => saveNow(part)} onUpload={(files) => uploadImages(part, files)} onRemoveAttachment={(attachmentId) => deleteImage(part, attachmentId)} onActivate={() => setActivePartId(part.id)} onTutorRequest={askTutor} key={part.id} />)}</div>
             </article>
             <nav className="practice-pagination" aria-label="Question navigation"><button type="button" onClick={() => moveTo(questionIndex - 1)} disabled={questionIndex === 0}><ChevronLeft size={18} /> Previous question</button><span>{questionIndex + 1} of {questions.length}</span><button type="button" onClick={() => moveTo(questionIndex + 1)} disabled={questionIndex === questions.length - 1}>Next question <ChevronRight size={18} /></button></nav>
-          </> : <EmptyQuestionCard topic={topic} />}
+          </> : <EmptyQuestionCard topic={topic} loading={isLoading} error={loadError} />}
         </div>
         <AiTutorPanel topic={topic} question={question} activePart={activePart} activeAnswer={answers[activePart.id] || ''} request={tutorRequest} onRequest={askTutor} />
       </div>
