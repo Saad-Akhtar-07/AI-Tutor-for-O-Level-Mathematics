@@ -54,7 +54,7 @@ class OpenRouterClient:
             },
             "provider": {
                 "require_parameters": True,
-                "data_collection": "deny",
+                "data_collection": self.settings.openrouter_data_collection,
             },
         }
         headers = {
@@ -105,15 +105,32 @@ class OpenRouterClient:
                             )
                     except (ValueError, AttributeError, TypeError):
                         pass
+                    error_code = f"provider_http_{error.response.status_code}"
+                    lowered_detail = provider_detail.lower()
+                    if error.response.status_code == 404 and (
+                        "data policy" in lowered_detail
+                        or "free model training" in lowered_detail
+                    ):
+                        error_code = "provider_data_policy"
                     raise OpenRouterError(
                         f"OpenRouter HTTP {error.response.status_code}: "
                         f"{provider_detail[:500]}",
-                        code=f"provider_http_{error.response.status_code}",
+                        code=error_code,
                     ) from error
             except (ValueError, KeyError, TypeError) as error:
                 last_error = error
             if attempt == 0:
                 time.sleep(1)
+
+        if (
+            isinstance(last_error, requests.HTTPError)
+            and last_error.response is not None
+            and last_error.response.status_code == 429
+        ):
+            raise OpenRouterError(
+                "OpenRouter's current model quota is exhausted or rate-limited.",
+                code="provider_rate_limited",
+            ) from last_error
 
         detail = str(last_error)[:300] if last_error else "unknown provider error"
         raise OpenRouterError(

@@ -90,3 +90,52 @@ class TutorReviewResponse(BaseModel):
 
 class TutorReviewList(BaseModel):
     reviews: list[TutorReviewResponse]
+
+
+class TutorChatRequest(BaseModel):
+    client_message_id: UUID
+    message: str = Field(min_length=1, max_length=1_000)
+
+    @model_validator(mode="after")
+    def normalize_and_validate_message(self):
+        self.message = self.message.strip()
+        if not self.message:
+            raise ValueError("message cannot be blank")
+        if "\x00" in self.message:
+            raise ValueError("message cannot contain null characters")
+        return self
+
+
+class SocraticReply(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    message: str = Field(min_length=1, max_length=2_000)
+    teaching_move: Literal[
+        "ask_question",
+        "small_hint",
+        "explain_concept",
+        "check_understanding",
+        "encourage",
+        "redirect",
+    ]
+    should_revise_work: bool
+    reveals_final_answer: Literal[False]
+
+
+class TutorChatTurnResponse(BaseModel):
+    id: UUID
+    client_message_id: UUID
+    question_part_id: str
+    response_revision: int | None = None
+    learner_message: str
+    tutor_message: str | None = None
+    teaching_move: str | None = None
+    should_revise_work: bool | None = None
+    status: Literal["pending", "processing", "completed", "failed"]
+    error_message: str | None = None
+    created_at: datetime
+    completed_at: datetime | None = None
+
+
+class TutorChatTurnList(BaseModel):
+    turns: list[TutorChatTurnResponse]

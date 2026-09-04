@@ -17,6 +17,8 @@ class Settings(BaseModel):
     openrouter_base_url: str
     openrouter_vision_model: str
     openrouter_evaluation_model: str
+    openrouter_chat_model: str
+    openrouter_data_collection: str
     openrouter_timeout_seconds: float
 
 
@@ -38,6 +40,12 @@ def get_settings() -> Settings:
         ).split(",")
         if origin.strip()
     ]
+    data_collection = os.getenv("OPENROUTER_DATA_COLLECTION", "deny").strip().lower()
+    if data_collection not in {"allow", "deny"}:
+        raise RuntimeError(
+            "OPENROUTER_DATA_COLLECTION must be either 'allow' or 'deny'."
+        )
+
     return Settings(
         database_url=database_url,
         cors_origins=origins,
@@ -51,6 +59,11 @@ def get_settings() -> Settings:
         openrouter_evaluation_model=os.getenv(
             "OPENROUTER_EVALUATION_MODEL", "openrouter/free"
         ).strip(),
+        openrouter_chat_model=os.getenv(
+            "OPENROUTER_CHAT_MODEL",
+            os.getenv("OPENROUTER_EVALUATION_MODEL", "openrouter/free"),
+        ).strip(),
+        openrouter_data_collection=data_collection,
         openrouter_timeout_seconds=float(
             os.getenv("OPENROUTER_TIMEOUT_SECONDS", "90")
         ),

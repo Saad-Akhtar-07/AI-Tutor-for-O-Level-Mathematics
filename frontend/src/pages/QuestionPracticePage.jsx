@@ -11,10 +11,11 @@ import {
   Lightbulb,
   LoaderCircle,
   Save,
+  Send,
   Sparkles,
   Trash2,
 } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import InlineContent from '../components/notes/InlineContent.jsx'
 import SyllabusSidebar from '../components/SyllabusSidebar.jsx'
@@ -22,10 +23,12 @@ import { getQuestionBank, getQuestionPartSolution } from '../api/content.js'
 import {
   attachmentContentUrl,
   getStudentResponses,
+  getTutorChatTurns,
   getTutorReviews,
   removeSolutionImage,
   requestTutorReview,
   saveStudentResponse,
+  sendTutorChatMessage,
   uploadSolutionImage,
 } from '../api/submissions.js'
 import { syllabus } from '../data/syllabus.js'
@@ -39,6 +42,38 @@ const mathsTools = [
   { id: 'divide', label: '÷', name: 'Add a division sign' },
   { id: 'probability', label: 'P( )', name: 'Add probability notation' },
 ]
+
+const TUTOR_WIDTH_STORAGE_KEY = 'ai-tutor-panel-width-v1'
+const DEFAULT_TUTOR_WIDTH = 380
+const MIN_TUTOR_WIDTH = 310
+const MAX_TUTOR_WIDTH = 650
+const MIN_QUESTION_WIDTH = 420
+const RESIZER_WIDTH = 22
+
+function storedTutorWidth() {
+  try {
+    const value = Number(localStorage.getItem(TUTOR_WIDTH_STORAGE_KEY))
+    return Number.isFinite(value) && value > 0 ? value : DEFAULT_TUTOR_WIDTH
+  } catch {
+    return DEFAULT_TUTOR_WIDTH
+  }
+}
+
+function tutorWidthBounds(workspace) {
+  const availableWidth = workspace?.getBoundingClientRect().width || 1080
+  return {
+    minimum: MIN_TUTOR_WIDTH,
+    maximum: Math.max(
+      MIN_TUTOR_WIDTH,
+      Math.min(MAX_TUTOR_WIDTH, availableWidth - MIN_QUESTION_WIDTH - RESIZER_WIDTH),
+    ),
+  }
+}
+
+function clampTutorWidth(workspace, requestedWidth) {
+  const { minimum, maximum } = tutorWidthBounds(workspace)
+  return Math.round(Math.min(maximum, Math.max(minimum, requestedWidth)))
+}
 
 function QuestionTable({ rows }) {
   return <div className="question-table-wrap"><table className="question-table"><tbody>{rows.map((row, ri) => <tr key={ri}>{row.map((cell, ci) => <td key={ci} className={ci === 0 ? 'question-table-label' : ''}><InlineContent content={cell || '\u00a0'} /></td>)}</tr>)}</tbody></table></div>
@@ -200,40 +235,96 @@ function QuestionPart({ part, answer, attachments, saveState, saveMessage, isAct
   </section>
 }
 
-function AiTutorPanel({ topic, question, activePart, reviews, reviewState, onRequest }) {
+const teachingMoveLabels = {
+  ask_question: 'Socratic question',
+  small_hint: 'Small hint',
+  explain_concept: 'Concept explanation',
+  check_understanding: 'Check your thinking',
+  encourage: 'Tutor',
+  redirect: 'Back to the question',
+}
+
+function AiTutorPanel({ topic, question, activePart, reviews, reviewState, chatTurns, chatState, onRequest, onSendMessage, onRetryMessage }) {
+  const [chatInput, setChatInput] = useState('')
   const messageEndRef = useRef(null)
   const isEmpty = Boolean(question.isPlaceholder)
   const partReviews = reviews.filter((review) => review.question_part_id === activePart.id)
+  const partTurns = chatTurns.filter((turn) => turn.question_part_id === activePart.id)
   const isReviewing = reviewState === 'reviewing'
+  const isChatting = chatState === 'sending'
+  const isBusy = isReviewing || isChatting
+  const timeline = [
+    ...partReviews.map((review) => ({ kind: 'review', createdAt: review.created_at, value: review })),
+    ...partTurns.map((turn) => ({ kind: 'chat', createdAt: turn.created_at, value: turn })),
+  ].sort((left, right) => new Date(left.createdAt) - new Date(right.createdAt))
+
+  useEffect(() => {
+    setChatInput('')
+  }, [activePart.id])
 
   useEffect(() => {
     messageEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
-  }, [partReviews.length, isReviewing])
+  }, [partReviews.length, partTurns.length, isBusy])
 
-  return <aside className="ai-tutor-panel" aria-label="AI tutor">
+  const submitMessage = (event) => {
+    event.preventDefault()
+    const message = chatInput.trim()
+    if (!message || isBusy || isEmpty) return
+    setChatInput('')
+    onSendMessage(activePart, message)
+  }
+
+  const handleComposerKeyDown = (event) => {
+    if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) {
+      event.preventDefault()
+      event.currentTarget.form?.requestSubmit()
+    }
+  }
+
+  return <aside className="ai-tutor-panel" id="ai-tutor-panel" aria-label="AI tutor">
     <header className="ai-tutor-header">
       <div className="ai-tutor-avatar"><Bot size={21} /></div>
-      <div><div className="ai-tutor-title"><h2>AI Tutor</h2><span>Live review</span></div><p><i /> {isReviewing ? 'Reviewing your work' : 'Ready to help'}</p></div>
+      <div><div className="ai-tutor-title"><h2>AI Tutor</h2><span>Socratic tutor</span></div><p><i /> {isReviewing ? 'Reviewing your work' : isChatting ? 'Thinking with you' : 'Ready to help'}</p></div>
     </header>
     <div className="ai-tutor-context"><span>Current focus</span><strong>{isEmpty ? `${topic.number} ${topic.title}` : `Question ${question.number} ${activePart.label}`}</strong><p>{isEmpty ? 'Questions are being prepared' : `${activePart.marks} ${activePart.marks === 1 ? 'mark' : 'marks'} · Guidance without giving the answer away`}</p></div>
-    <div className="ai-tutor-conversation" aria-live="polite">
-      {partReviews.length === 0 && !isReviewing ? <div className="tutor-welcome">
+    <div className="ai-tutor-conversation" aria-live="polite" aria-busy={isBusy}>
+      {timeline.length === 0 && !isBusy ? <div className="tutor-welcome">
         <div><Sparkles size={22} /></div>
         <h3>{isEmpty ? `Your ${topic.title} tutor is ready.` : 'Try it—I’m here if you get stuck.'}</h3>
-        <p>{isEmpty ? 'When a reviewed question is loaded, I will follow its active part and help without taking over the solution.' : 'Write a step or attach a photo, then ask for a hint or a complete check.'}</p>
+        <p>{isEmpty ? 'When a reviewed question is loaded, I will follow its active part and help without taking over the solution.' : 'Ask about a step, request a hint, or share what is confusing. I will help you reason it out one step at a time.'}</p>
       </div> : <div className="tutor-messages">
-        {partReviews.map((review) => <div className="tutor-message assistant" key={review.id}>
-          <span>{review.status === 'completed' ? `Attempt ${review.attempt_number} · ${review.marks_awarded}/${review.marks_maximum} marks` : `Attempt ${review.attempt_number}`}</span>
-          <p>{review.feedback || review.error_message || 'This review did not complete.'}</p>
+        {timeline.map((item) => item.kind === 'review' ? <div className="tutor-message assistant" key={`review-${item.value.id}`}>
+          <span>{item.value.status === 'completed' ? `Attempt ${item.value.attempt_number} · ${item.value.marks_awarded}/${item.value.marks_maximum} marks` : `Attempt ${item.value.attempt_number}`}</span>
+          <p>{item.value.feedback || item.value.error_message || 'This review did not complete.'}</p>
+        </div> : <div className="tutor-chat-turn" key={`chat-${item.value.client_message_id}`}>
+          <div className="tutor-message student"><span>You</span><p>{item.value.learner_message}</p></div>
+          {item.value.status === 'completed' && <div className="tutor-message assistant"><span>{teachingMoveLabels[item.value.teaching_move] || 'Tutor'}</span><p>{item.value.tutor_message}</p></div>}
+          {item.value.status === 'processing' && <div className="tutor-message assistant"><span>Thinking</span><p className="tutor-thinking"><LoaderCircle className="spin" size={15} /> Working out the best next question…</p></div>}
+          {item.value.status === 'failed' && <div className="tutor-message assistant is-error" role="alert"><span>Message saved</span><p>{item.value.error_message || 'I could not answer just now.'}</p><button type="button" className="tutor-retry-button" disabled={isBusy} onClick={() => onRetryMessage(activePart, item.value)}>Retry</button></div>}
         </div>)}
-        {isReviewing && <div className="tutor-message assistant"><span>Reviewing</span><p><LoaderCircle className="spin" size={16} /> Reading your method and preparing the next hint…</p></div>}
+        {isReviewing && <div className="tutor-message assistant"><span>Reviewing</span><p className="tutor-thinking"><LoaderCircle className="spin" size={16} /> Reading your method and preparing the next hint…</p></div>}
         <div ref={messageEndRef} />
       </div>}
     </div>
     <div className="tutor-quick-actions" aria-label="Tutor shortcuts">
-      <button type="button" disabled={isEmpty || isReviewing} onClick={() => onRequest('hint', activePart)}><Lightbulb size={15} /> Give a hint</button>
-      <button type="button" disabled={isEmpty || isReviewing} onClick={() => onRequest('check', activePart)}><CheckCircle2 size={15} /> Check my work</button>
+      <button type="button" disabled={isEmpty || isBusy} onClick={() => onRequest('hint', activePart)}><Lightbulb size={15} /> Give a hint</button>
+      <button type="button" disabled={isEmpty || isBusy} onClick={() => onRequest('check', activePart)}><CheckCircle2 size={15} /> Check my work</button>
     </div>
+    <form className="tutor-chat-form" onSubmit={submitMessage}>
+      <label className="sr-only" htmlFor={`tutor-message-${activePart.id}`}>Ask the AI tutor about this question</label>
+      <textarea
+        id={`tutor-message-${activePart.id}`}
+        rows="2"
+        maxLength="1000"
+        value={chatInput}
+        onChange={(event) => setChatInput(event.target.value)}
+        onKeyDown={handleComposerKeyDown}
+        placeholder={isEmpty ? 'Available with a question' : 'Ask about this step…'}
+        disabled={isEmpty || isBusy}
+      />
+      <button type="submit" aria-label="Send message" title="Send message" disabled={isEmpty || isBusy || !chatInput.trim()}><Send size={18} /></button>
+      <small>Enter to send · Shift+Enter for a new line</small>
+    </form>
   </aside>
 }
 
@@ -305,9 +396,20 @@ export default function QuestionPracticePage() {
   const [activePartId, setActivePartId] = useState('')
   const [reviews, setReviews] = useState([])
   const [reviewStates, setReviewStates] = useState({})
+  const [chatTurns, setChatTurns] = useState([])
+  const [chatStates, setChatStates] = useState({})
+  const [tutorPanelWidth, setTutorPanelWidth] = useState(storedTutorWidth)
+  const [tutorPanelMaxWidth, setTutorPanelMaxWidth] = useState(MAX_TUTOR_WIDTH)
+  const [isResizingTutor, setIsResizingTutor] = useState(false)
   const answersRef = useRef({})
   const saveTimersRef = useRef(new Map())
   const saveVersionsRef = useRef(new Map())
+  const workspaceRef = useRef(null)
+  const tutorPanelWidthRef = useRef(tutorPanelWidth)
+  const preferredTutorPanelWidthRef = useRef(tutorPanelWidth)
+  const resizeFrameRef = useRef(null)
+  const pendingPointerXRef = useRef(null)
+  const isResizingTutorRef = useRef(false)
   const question = hasQuestions ? (questions[questionIndex] || questions[0]) : emptyQuestion
   const activePart = question.parts.find((part) => part.id === activePartId) || question.parts[0]
 
@@ -341,12 +443,14 @@ export default function QuestionPracticePage() {
     setActivePartId('')
     setReviews([])
     setReviewStates({})
+    setChatTurns([])
+    setChatStates({})
     saveTimersRef.current.forEach((timer) => clearTimeout(timer))
     saveTimersRef.current.clear()
     if (!topic) return undefined
     let cancelled = false
-    Promise.all([getStudentResponses(topic.number), getTutorReviews(topic.number)])
-      .then(([responses, restoredReviews]) => {
+    Promise.all([getStudentResponses(topic.number), getTutorReviews(topic.number), getTutorChatTurns(topic.number)])
+      .then(([responses, restoredReviews, restoredChatTurns]) => {
         if (cancelled) return
         const restoredAnswers = {}
         const restoredAttachments = {}
@@ -361,6 +465,7 @@ export default function QuestionPracticePage() {
         setAttachments(restoredAttachments)
         setSaveStates(restoredStates)
         setReviews(restoredReviews)
+        setChatTurns(restoredChatTurns)
       })
       .catch((error) => {
         if (!cancelled) setResponseLoadError(error.message)
@@ -371,6 +476,26 @@ export default function QuestionPracticePage() {
       saveTimersRef.current.clear()
     }
   }, [topicNumber])
+
+  useLayoutEffect(() => {
+    const keepWidthInBounds = () => {
+      const workspace = workspaceRef.current
+      if (!workspace || window.matchMedia('(max-width: 1279px)').matches) return
+      const bounds = tutorWidthBounds(workspace)
+      const nextWidth = clampTutorWidth(workspace, preferredTutorPanelWidthRef.current)
+      setTutorPanelMaxWidth(bounds.maximum)
+      tutorPanelWidthRef.current = nextWidth
+      setTutorPanelWidth(nextWidth)
+      workspace.style.setProperty('--tutor-panel-width', `${nextWidth}px`)
+    }
+    keepWidthInBounds()
+    window.addEventListener('resize', keepWidthInBounds)
+    return () => {
+      window.removeEventListener('resize', keepWidthInBounds)
+      if (resizeFrameRef.current !== null) cancelAnimationFrame(resizeFrameRef.current)
+      document.documentElement.classList.remove('is-resizing-tutor')
+    }
+  }, [])
 
   useEffect(() => {
     if (!topic) return
@@ -389,6 +514,87 @@ export default function QuestionPracticePage() {
     setQuestionIndex(nextIndex)
     setActivePartId(nextQuestion.parts[0].id)
   }
+
+  const applyTutorWidth = (requestedWidth, persist = false) => {
+    const workspace = workspaceRef.current
+    if (!workspace) return tutorPanelWidthRef.current
+    const nextWidth = clampTutorWidth(workspace, requestedWidth)
+    tutorPanelWidthRef.current = nextWidth
+    workspace.style.setProperty('--tutor-panel-width', `${nextWidth}px`)
+    if (persist) {
+      preferredTutorPanelWidthRef.current = nextWidth
+      setTutorPanelWidth(nextWidth)
+      try { localStorage.setItem(TUTOR_WIDTH_STORAGE_KEY, String(nextWidth)) }
+      catch { /* The width remains active for this page. */ }
+    }
+    return nextWidth
+  }
+
+  const updateTutorWidthFromPointer = (clientX) => {
+    pendingPointerXRef.current = clientX
+    if (resizeFrameRef.current !== null) return
+    resizeFrameRef.current = requestAnimationFrame(() => {
+      resizeFrameRef.current = null
+      const workspace = workspaceRef.current
+      if (!workspace || pendingPointerXRef.current === null) return
+      const rightEdge = workspace.getBoundingClientRect().right
+      applyTutorWidth(rightEdge - pendingPointerXRef.current)
+    })
+  }
+
+  const startTutorResize = (event) => {
+    if (event.button !== 0) return
+    event.preventDefault()
+    isResizingTutorRef.current = true
+    setIsResizingTutor(true)
+    setTutorPanelMaxWidth(tutorWidthBounds(workspaceRef.current).maximum)
+    document.documentElement.classList.add('is-resizing-tutor')
+    event.currentTarget.setPointerCapture(event.pointerId)
+    updateTutorWidthFromPointer(event.clientX)
+  }
+
+  const moveTutorResize = (event) => {
+    if (!isResizingTutorRef.current) return
+    event.preventDefault()
+    updateTutorWidthFromPointer(event.clientX)
+  }
+
+  const finishTutorResize = (event) => {
+    if (!isResizingTutorRef.current) return
+    if (resizeFrameRef.current !== null) {
+      cancelAnimationFrame(resizeFrameRef.current)
+      resizeFrameRef.current = null
+    }
+    if (event.type !== 'pointercancel') {
+      const workspace = workspaceRef.current
+      const rightEdge = workspace?.getBoundingClientRect().right || event.clientX
+      applyTutorWidth(rightEdge - event.clientX)
+    }
+    isResizingTutorRef.current = false
+    setIsResizingTutor(false)
+    preferredTutorPanelWidthRef.current = tutorPanelWidthRef.current
+    setTutorPanelWidth(tutorPanelWidthRef.current)
+    try { localStorage.setItem(TUTOR_WIDTH_STORAGE_KEY, String(tutorPanelWidthRef.current)) }
+    catch { /* The width remains active for this page. */ }
+    document.documentElement.classList.remove('is-resizing-tutor')
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId)
+    }
+  }
+
+  const resizeTutorWithKeyboard = (event) => {
+    const largeStep = event.shiftKey ? 64 : 24
+    let nextWidth = tutorPanelWidthRef.current
+    if (event.key === 'ArrowLeft') nextWidth += largeStep
+    else if (event.key === 'ArrowRight') nextWidth -= largeStep
+    else if (event.key === 'Home') nextWidth = MIN_TUTOR_WIDTH
+    else if (event.key === 'End') nextWidth = tutorWidthBounds(workspaceRef.current).maximum
+    else return
+    event.preventDefault()
+    applyTutorWidth(nextWidth, true)
+  }
+
+  const resetTutorWidth = () => applyTutorWidth(DEFAULT_TUTOR_WIDTH, true)
 
   const persistAnswer = async (partId, value, status = 'draft') => {
     const version = (saveVersionsRef.current.get(partId) || 0) + 1
@@ -501,6 +707,60 @@ export default function QuestionPracticePage() {
     }
   }
 
+  const sendTutorMessage = async (part, message, clientMessageId = crypto.randomUUID()) => {
+    if (!hasQuestions) return
+    setActivePartId(part.id)
+    if (saveTimersRef.current.has(part.id)) {
+      clearTimeout(saveTimersRef.current.get(part.id))
+      saveTimersRef.current.delete(part.id)
+      try {
+        await persistAnswer(part.id, answersRef.current[part.id] || '')
+      } catch {
+        // The learner can still ask for help if saving their separate work area fails.
+      }
+    }
+    setChatStates((current) => ({ ...current, [part.id]: 'sending' }))
+    setChatTurns((current) => {
+      const existing = current.find((turn) => turn.client_message_id === clientMessageId)
+      const optimistic = {
+        ...(existing || {}),
+        id: existing?.id || clientMessageId,
+        client_message_id: clientMessageId,
+        question_part_id: part.id,
+        learner_message: message,
+        tutor_message: null,
+        status: 'processing',
+        error_message: null,
+        created_at: existing?.created_at || new Date().toISOString(),
+      }
+      return [...current.filter((turn) => turn.client_message_id !== clientMessageId), optimistic]
+    })
+    try {
+      const turn = await sendTutorChatMessage(part.id, message, clientMessageId)
+      setChatTurns((current) => [
+        ...current.filter((item) => item.client_message_id !== clientMessageId),
+        turn,
+      ])
+      setChatStates((current) => ({ ...current, [part.id]: 'complete' }))
+    } catch (error) {
+      setChatStates((current) => ({ ...current, [part.id]: 'error' }))
+      setChatTurns((current) => current.map((turn) => (
+        turn.client_message_id === clientMessageId
+          ? { ...turn, status: 'failed', error_message: error.message }
+          : turn
+      )))
+      getTutorChatTurns(topic.number).then((restored) => {
+        setChatTurns((current) => {
+          const transient = current.filter((turn) => (
+            !restored.some((item) => item.client_message_id === turn.client_message_id)
+            && ['processing', 'failed'].includes(turn.status)
+          ))
+          return [...restored, ...transient]
+        })
+      }).catch(() => {})
+    }
+  }
+
   const summary = hasQuestions
     ? `${questions.length} reviewed questions · ${questionBank.total_marks} marks · Your tutor stays with the active part`
     : isLoading
@@ -519,7 +779,11 @@ export default function QuestionPracticePage() {
         <div>{hasQuestions ? questions.map((item, index) => <button type="button" key={item.id} className={index === questionIndex ? 'active' : ''} aria-current={index === questionIndex ? 'step' : undefined} onClick={() => moveTo(index)}>{item.number}</button>) : <span className="question-picker-empty"><CircleDashed size={16} /> {isLoading ? 'Loading questions…' : loadError ? 'Content API unavailable' : 'No reviewed questions available'}</span>}</div>
       </nav>
       {responseLoadError && <div className="response-load-warning" role="alert">Saved work could not be restored: {responseLoadError}</div>}
-      <div className="practice-workspace">
+      <div
+        ref={workspaceRef}
+        className={`practice-workspace ${isResizingTutor ? 'is-resizing' : ''}`}
+        style={{ '--tutor-panel-width': `${tutorPanelWidth}px` }}
+      >
         <div className="practice-question-column">
           {hasQuestions ? <>
             <article className="exam-question" key={question.id}>
@@ -530,7 +794,26 @@ export default function QuestionPracticePage() {
             <nav className="practice-pagination" aria-label="Question navigation"><button type="button" onClick={() => moveTo(questionIndex - 1)} disabled={questionIndex === 0}><ChevronLeft size={18} /> Previous question</button><span>{questionIndex + 1} of {questions.length}</span><button type="button" onClick={() => moveTo(questionIndex + 1)} disabled={questionIndex === questions.length - 1}>Next question <ChevronRight size={18} /></button></nav>
           </> : <EmptyQuestionCard topic={topic} loading={isLoading} error={loadError} />}
         </div>
-        <AiTutorPanel topic={topic} question={question} activePart={activePart} reviews={reviews} reviewState={reviewStates[activePart.id] || 'idle'} onRequest={askTutor} />
+        <div
+          className="tutor-panel-resizer"
+          role="separator"
+          aria-label="Resize question and AI tutor panels"
+          aria-controls="ai-tutor-panel"
+          aria-orientation="vertical"
+          aria-valuemin={MIN_TUTOR_WIDTH}
+          aria-valuemax={tutorPanelMaxWidth}
+          aria-valuenow={tutorPanelWidth}
+          aria-valuetext={`AI tutor width ${tutorPanelWidth} pixels`}
+          tabIndex="0"
+          title="Drag to resize · Double-click to reset"
+          onPointerDown={startTutorResize}
+          onPointerMove={moveTutorResize}
+          onPointerUp={finishTutorResize}
+          onPointerCancel={finishTutorResize}
+          onKeyDown={resizeTutorWithKeyboard}
+          onDoubleClick={resetTutorWidth}
+        ><span aria-hidden="true" /></div>
+        <AiTutorPanel topic={topic} question={question} activePart={activePart} reviews={reviews} reviewState={reviewStates[activePart.id] || 'idle'} chatTurns={chatTurns} chatState={chatStates[activePart.id] || 'idle'} onRequest={askTutor} onSendMessage={sendTutorMessage} onRetryMessage={(part, turn) => sendTutorMessage(part, turn.learner_message, turn.client_message_id)} />
       </div>
     </div>
   </main>

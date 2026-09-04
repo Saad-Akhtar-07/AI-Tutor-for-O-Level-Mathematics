@@ -102,6 +102,8 @@ demo:
 ```env
 OPENROUTER_VISION_MODEL=openrouter/free
 OPENROUTER_EVALUATION_MODEL=openrouter/free
+OPENROUTER_CHAT_MODEL=openrouter/free
+OPENROUTER_DATA_COLLECTION=deny
 OPENROUTER_TIMEOUT_SECONDS=90
 ```
 
@@ -115,6 +117,26 @@ guiding question, targeted hint, or worked next step based on prior attempts.
 The normal question-bank response no longer includes answers. Mark schemes load
 only when the learner explicitly reveals one. Review endpoints return
 student-safe feedback and never return the internal snapshot or evaluation.
+
+### Socratic tutor chat
+
+The question-side tutor also supports persisted, question-part-scoped chat. Each
+turn is grounded in the reviewed question, private marking criteria, the learner's
+current typed work, latest assessment, and up to 12 recent completed turns. The
+chat model is teaching-only: it cannot award marks or mutate review records, and
+its strict response schema forbids claiming that a reply reveals the final answer.
+Learner messages survive refresh, failed provider calls remain retryable, duplicate
+client message IDs are idempotent, and chat is limited to 30 turns per session per
+10 minutes.
+
+For a public demo, pin `OPENROUTER_CHAT_MODEL` to a structured-output-capable
+instruction model rather than relying on `openrouter/free`.
+
+`OPENROUTER_DATA_COLLECTION` defaults to `deny`, so providers that may retain
+student work or train on it are excluded. Some free endpoints require
+`OPENROUTER_DATA_COLLECTION=allow`; use that setting only after making an
+explicit privacy decision. A funded, pinned model with a compatible privacy
+endpoint is the recommended demo and production configuration.
 
 After automated verification, run one disposable real-provider smoke test with:
 

@@ -1,12 +1,14 @@
 import base64
+from uuid import uuid4
 
 from fastapi.testclient import TestClient
 import psycopg
 
 from backend.app.config import get_settings
 from backend.app.main import app
-from backend.app.schemas.tutor import EvaluationResult, VisionTranscription
-from backend.app.services.tutor import TutorModelResult
+from backend.app.schemas.tutor import EvaluationResult, SocraticReply, VisionTranscription
+from backend.app.services.openrouter import OpenRouterError
+from backend.app.services.tutor import TutorChatResult, TutorModelResult
 
 
 def test_probability_content_contract(monkeypatch) -> None:
@@ -161,6 +163,119 @@ def test_probability_content_contract(monkeypatch) -> None:
             )
             assert history.status_code == 200
             assert history.json()["reviews"][0]["feedback"]
+
+            chat_calls = []
+
+            def fake_tutor_chat(settings, snapshot, learner_message):
+                chat_calls.append(
+                    {"snapshot": snapshot, "learner_message": learner_message}
+                )
+                return TutorChatResult(
+                    reply=SocraticReply(
+                        message=(
+                            "Start with the denominator: how many counters are "
+                            "available before the first draw?"
+                        ),
+                        teaching_move="ask_question",
+                        should_revise_work=True,
+                        reveals_final_answer=False,
+                    ),
+                    actual_model="test-chat-model",
+                    usage={},
+                )
+
+            monkeypatch.setattr(
+                "backend.app.routers.tutor.run_tutor_chat", fake_tutor_chat
+            )
+            chat_message_id = uuid4()
+            chatted = client.post(
+                f"/api/v1/learner-sessions/{session_id}/question-parts/"
+                f"{other_part_id}/chat-turns",
+                json={
+                    "client_message_id": str(chat_message_id),
+                    "message": "I do not know how to begin.",
+                },
+            )
+            assert chatted.status_code == 200
+            assert chatted.json()["status"] == "completed"
+            assert chatted.json()["response_revision"] is None
+            assert chatted.json()["teaching_move"] == "ask_question"
+            assert len(chat_calls) == 1
+            assert chat_calls[0]["snapshot"]["learner_work"]["typed_work"] == ""
+            assert chat_calls[0]["snapshot"]["private_mark_scheme"]["answer"]
+
+            duplicate_chat = client.post(
+                f"/api/v1/learner-sessions/{session_id}/question-parts/"
+                f"{other_part_id}/chat-turns",
+                json={
+                    "client_message_id": str(chat_message_id),
+                    "message": "I do not know how to begin.",
+                },
+            )
+            assert duplicate_chat.status_code == 200
+            assert duplicate_chat.json()["id"] == chatted.json()["id"]
+            assert len(chat_calls) == 1
+
+            follow_up = client.post(
+                f"/api/v1/learner-sessions/{session_id}/question-parts/"
+                f"{other_part_id}/chat-turns",
+                json={
+                    "client_message_id": str(uuid4()),
+                    "message": "Should I count all of the counters?",
+                },
+            )
+            assert follow_up.status_code == 200
+            assert len(chat_calls) == 2
+            assert chat_calls[1]["snapshot"]["conversation"] == [{
+                "learner": "I do not know how to begin.",
+                "tutor": chatted.json()["tutor_message"],
+            }]
+
+            chat_history = client.get(
+                f"/api/v1/learner-sessions/{session_id}/chat-turns",
+                params={"topic_number": "8"},
+            )
+            assert chat_history.status_code == 200
+            assert len(chat_history.json()["turns"]) == 2
+
+            def unavailable_tutor_chat(settings, snapshot, learner_message):
+                raise OpenRouterError("temporary test outage", code="provider_error")
+
+            monkeypatch.setattr(
+                "backend.app.routers.tutor.run_tutor_chat", unavailable_tutor_chat
+            )
+            retry_message_id = uuid4()
+            failed_chat = client.post(
+                f"/api/v1/learner-sessions/{session_id}/question-parts/"
+                f"{other_part_id}/chat-turns",
+                json={
+                    "client_message_id": str(retry_message_id),
+                    "message": "Can we try a smaller step?",
+                },
+            )
+            assert failed_chat.status_code == 503
+
+            monkeypatch.setattr(
+                "backend.app.routers.tutor.run_tutor_chat", fake_tutor_chat
+            )
+            retried_chat = client.post(
+                f"/api/v1/learner-sessions/{session_id}/question-parts/"
+                f"{other_part_id}/chat-turns",
+                json={
+                    "client_message_id": str(retry_message_id),
+                    "message": "Can we try a smaller step?",
+                },
+            )
+            assert retried_chat.status_code == 200
+            assert retried_chat.json()["status"] == "completed"
+            assert retried_chat.json()["client_message_id"] == str(retry_message_id)
+
+            blank_chat = client.post(
+                f"/api/v1/learner-sessions/{session_id}/question-parts/"
+                f"{other_part_id}/chat-turns",
+                json={"client_message_id": str(uuid4()), "message": "   "},
+            )
+            assert blank_chat.status_code == 422
 
             restored = client.get(
                 f"/api/v1/learner-sessions/{session_id}/responses",

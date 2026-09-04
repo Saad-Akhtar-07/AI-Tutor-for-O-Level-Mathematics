@@ -32,7 +32,7 @@ async function apiRequest(path, options = {}) {
     if (response.status === 204) return null
     return response.json()
   } catch (error) {
-    if (error.name === 'AbortError') throw new Error('Saving timed out. Please try again.')
+    if (error.name === 'AbortError') throw new Error('The request timed out. Please try again.')
     throw error
   } finally {
     clearTimeout(timeout)
@@ -142,6 +142,27 @@ export function requestTutorReview(questionPartId, expectedRevision, intent = 'c
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ expected_revision: expectedRevision, intent }),
+      timeoutMs: 120000,
+    },
+  ))
+}
+
+export function getTutorChatTurns(topicNumber) {
+  return withSession(async (sessionId) => {
+    const data = await apiRequest(
+      `/learner-sessions/${sessionId}/chat-turns?topic_number=${encodeURIComponent(topicNumber)}`,
+    )
+    return data.turns
+  })
+}
+
+export function sendTutorChatMessage(questionPartId, message, clientMessageId) {
+  return withSession((sessionId) => apiRequest(
+    `/learner-sessions/${sessionId}/question-parts/${encodeURIComponent(questionPartId)}/chat-turns`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ client_message_id: clientMessageId, message }),
       timeoutMs: 120000,
     },
   ))

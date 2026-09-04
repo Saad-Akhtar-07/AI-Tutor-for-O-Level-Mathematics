@@ -175,5 +175,6 @@ Source PDFs and generated note extracts are intentionally excluded from version 
 
 This is an active hackathon prototype. The Probability workspace now supports
 real, persisted AI reviews with vision-first handwriting transcription,
-structured marking, and progressive hints. Broader learner mastery and
-curriculum sequencing remain planned.
+structured marking, progressive hints, and persisted Socratic chat grounded in
+the active question and learner work. Broader learner mastery and curriculum
+sequencing remain planned.

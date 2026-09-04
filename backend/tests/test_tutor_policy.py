@@ -1,4 +1,7 @@
-from backend.app.schemas.tutor import EvaluationResult
+import pytest
+from pydantic import ValidationError
+
+from backend.app.schemas.tutor import EvaluationResult, SocraticReply
 from backend.app.services.tutor import choose_policy
 
 
@@ -33,3 +36,13 @@ def test_policy_handles_correct_and_unreadable_work() -> None:
     unclear = choose_policy(evaluation("unassessable", "unreadable"), 0)
     assert unclear.action == "request_clearer_response"
     assert unclear.hint_level == 0
+
+
+def test_socratic_reply_schema_rejects_answer_reveals() -> None:
+    with pytest.raises(ValidationError):
+        SocraticReply(
+            message="Here is the final answer.",
+            teaching_move="small_hint",
+            should_revise_work=False,
+            reveals_final_answer=True,
+        )

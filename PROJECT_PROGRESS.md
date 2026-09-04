@@ -44,6 +44,19 @@ The hackathon MVP is intentionally limited to Probability so that one topic can 
   feedback restoration after refresh.
 - Added automated policy and full API review tests without spending model calls.
 
+### Implementation update - 4 September 2026: Socratic tutor conversation
+
+- Replaced the removed demo composer with live, persisted AI tutor chat scoped to
+  the active learner session and question part.
+- Grounded each turn in the reviewed question, private marking criteria, current
+  typed work, latest assessment, and bounded recent conversation history.
+- Kept marking and teaching responsibilities separate: chat cannot award marks or
+  mutate immutable reviews, and the structured tutor response must guide without
+  revealing the final answer.
+- Added idempotent message submission, safe provider failures with retry, a
+  30-turn-per-10-minute session limit, restored history after refresh, optimistic
+  UI feedback, and a multiline accessible composer.
+
 ### Implementation update - 3 September 2026
 
 - Added anonymous learner sessions whose UUID is retained by the browser for the
