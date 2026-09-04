@@ -8,6 +8,7 @@ from PIL import Image, ImageOps, UnidentifiedImageError
 
 MAX_UPLOAD_BYTES = 8 * 1024 * 1024
 MAX_IMAGE_PIXELS = 40_000_000
+MAX_AI_IMAGE_EDGE = 2048
 ALLOWED_FORMATS = {
     "JPEG": ("image/jpeg", "JPEG"),
     "PNG": ("image/png", "PNG"),
@@ -81,6 +82,23 @@ def normalize_solution_image(raw: bytes) -> NormalizedImage:
     return NormalizedImage(
         data=data,
         media_type=media_type,
+        width=image.width,
+        height=image.height,
+        sha256=sha256(data).hexdigest(),
+    )
+
+
+def prepare_ai_image(raw: bytes) -> NormalizedImage:
+    """Create the immutable, size-bounded image that is sent to the vision model."""
+    with Image.open(BytesIO(raw)) as opened:
+        image = opened.convert("RGB")
+        image.thumbnail((MAX_AI_IMAGE_EDGE, MAX_AI_IMAGE_EDGE), Image.Resampling.LANCZOS)
+        output = BytesIO()
+        image.save(output, format="JPEG", quality=88, optimize=True)
+        data = output.getvalue()
+    return NormalizedImage(
+        data=data,
+        media_type="image/jpeg",
         width=image.width,
         height=image.height,
         sha256=sha256(data).hexdigest(),

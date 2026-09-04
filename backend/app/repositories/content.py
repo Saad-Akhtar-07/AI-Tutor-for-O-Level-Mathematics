@@ -47,45 +47,22 @@ def get_question_bank(connection: Connection, topic_number: str) -> dict | None:
     question_ids = [question["id"] for question in questions]
 
     parts_by_question: dict[str, list[dict]] = {question_id: [] for question_id in question_ids}
-    points_by_part: dict[str, list[dict]] = {}
     if question_ids:
         parts = connection.execute(
             """
-            SELECT id, question_id, label, marks, prompt_blocks,
-                   answer_suffix, model_answer
+            SELECT id, question_id, label, marks, prompt_blocks, answer_suffix
             FROM question_parts
             WHERE question_id = ANY(%s)
             ORDER BY question_id, position
             """,
             (question_ids,),
         ).fetchall()
-        part_ids = [part["id"] for part in parts]
-
-        if part_ids:
-            points = connection.execute(
-                """
-                SELECT question_part_id, code, description
-                FROM marking_points
-                WHERE question_part_id = ANY(%s)
-                ORDER BY question_part_id, position
-                """,
-                (part_ids,),
-            ).fetchall()
-            for point in points:
-                points_by_part.setdefault(point["question_part_id"], []).append(
-                    {"code": point["code"], "text": point["description"]}
-                )
-
         for part in parts:
             payload = {
                 "id": part["id"],
                 "label": part["label"],
                 "marks": part["marks"],
                 "prompt": part["prompt_blocks"],
-                "mark_scheme": {
-                    "answer": part["model_answer"],
-                    "marking_points": points_by_part.get(part["id"], []),
-                },
             }
             if part["answer_suffix"] is not None:
                 payload["answer_suffix"] = part["answer_suffix"]
@@ -116,6 +93,36 @@ def get_question_bank(connection: Connection, topic_number: str) -> dict | None:
         "total_marks": collection["total_marks"],
         "review_status": collection["review_status"],
         "questions": question_payloads,
+    }
+
+
+def get_question_part_solution(connection: Connection, question_part_id: str) -> dict | None:
+    part = connection.execute(
+        """
+        SELECT id, model_answer
+        FROM question_parts
+        WHERE id = %s
+        """,
+        (question_part_id,),
+    ).fetchone()
+    if part is None:
+        return None
+    points = connection.execute(
+        """
+        SELECT code, description
+        FROM marking_points
+        WHERE question_part_id = %s
+        ORDER BY position
+        """,
+        (question_part_id,),
+    ).fetchall()
+    return {
+        "question_part_id": part["id"],
+        "answer": part["model_answer"],
+        "marking_points": [
+            {"code": point["code"], "text": point["description"]}
+            for point in points
+        ],
     }
 
 

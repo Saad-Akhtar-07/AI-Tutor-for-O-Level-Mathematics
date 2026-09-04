@@ -11,7 +11,6 @@ import {
   Lightbulb,
   LoaderCircle,
   Save,
-  Send,
   Sparkles,
   Trash2,
 } from 'lucide-react'
@@ -19,11 +18,13 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import InlineContent from '../components/notes/InlineContent.jsx'
 import SyllabusSidebar from '../components/SyllabusSidebar.jsx'
-import { getQuestionBank } from '../api/content.js'
+import { getQuestionBank, getQuestionPartSolution } from '../api/content.js'
 import {
   attachmentContentUrl,
   getStudentResponses,
+  getTutorReviews,
   removeSolutionImage,
+  requestTutorReview,
   saveStudentResponse,
   uploadSolutionImage,
 } from '../api/submissions.js'
@@ -160,7 +161,25 @@ function AnswerComposer({ part, value, attachments, saveState, saveMessage, onCh
 
 function QuestionPart({ part, answer, attachments, saveState, saveMessage, isActive, onAnswerChange, onSave, onUpload, onRemoveAttachment, onActivate, onTutorRequest }) {
   const [showScheme, setShowScheme] = useState(false)
+  const [scheme, setScheme] = useState(null)
+  const [schemeState, setSchemeState] = useState('idle')
   const schemeId = `${part.id}-scheme`
+
+  const toggleScheme = async () => {
+    if (showScheme) {
+      setShowScheme(false)
+      return
+    }
+    setShowScheme(true)
+    if (scheme) return
+    setSchemeState('loading')
+    try {
+      setScheme(await getQuestionPartSolution(part.id))
+      setSchemeState('loaded')
+    } catch {
+      setSchemeState('error')
+    }
+  }
 
   return <section className={`question-part ${isActive ? 'is-active' : ''}`} onFocusCapture={onActivate}>
     <div className="question-part-heading"><span>{part.label}</span><strong>{part.marks} {part.marks === 1 ? 'mark' : 'marks'}</strong></div>
@@ -171,104 +190,50 @@ function QuestionPart({ part, answer, attachments, saveState, saveMessage, isAct
         <button type="button" className="hint-button" onClick={() => onTutorRequest('hint', part, answer)}><Lightbulb size={17} /> Give me a hint</button>
         <button type="button" className="check-ai-button" onClick={() => onTutorRequest('check', part, answer)}><Sparkles size={17} /> Check with AI</button>
       </div>
-      <button type="button" className={`mark-scheme-toggle ${showScheme ? 'is-open' : ''}`} aria-expanded={showScheme} aria-controls={schemeId} onClick={() => setShowScheme((visible) => !visible)}>{showScheme ? <EyeOff size={17} /> : <Eye size={17} />}{showScheme ? 'Hide mark scheme' : 'Mark scheme'}</button>
+      <button type="button" className={`mark-scheme-toggle ${showScheme ? 'is-open' : ''}`} aria-expanded={showScheme} aria-controls={schemeId} onClick={toggleScheme}>{showScheme ? <EyeOff size={17} /> : <Eye size={17} />}{showScheme ? 'Hide mark scheme' : 'Mark scheme'}</button>
     </div>
-    {showScheme && <div className="mark-scheme-panel" id={schemeId}><div className="scheme-answer"><span>Answer</span><p><InlineContent content={part.mark_scheme.answer} /></p></div>{part.mark_scheme.marking_points.length > 0 && <div className="scheme-points"><span>How marks are awarded</span><ol>{part.mark_scheme.marking_points.map((point, index) => <li key={`${point.code}-${index}`}><strong>{point.code}</strong><p><InlineContent content={point.text} /></p></li>)}</ol></div>}</div>}
+    {showScheme && <div className="mark-scheme-panel" id={schemeId}>
+      {schemeState === 'loading' && <p>Loading mark scheme…</p>}
+      {schemeState === 'error' && <p role="alert">The mark scheme could not be loaded.</p>}
+      {scheme && <><div className="scheme-answer"><span>Answer</span><p><InlineContent content={scheme.answer} /></p></div>{scheme.marking_points.length > 0 && <div className="scheme-points"><span>How marks are awarded</span><ol>{scheme.marking_points.map((point, index) => <li key={`${point.code}-${index}`}><strong>{point.code}</strong><p><InlineContent content={point.text} /></p></li>)}</ol></div>}</>}
+    </div>}
   </section>
 }
 
-function partText(part) {
-  return part.prompt.filter((block) => block.type === 'paragraph').map((block) => block.content).join(' ').toLowerCase()
-}
-
-function buildTutorReply(type, question, part, answer = '', message = '') {
-  const context = `${question.title} ${partText(part)}`.toLowerCase()
-
-  if (type === 'check' && !answer.trim()) return 'Add your first step in the answer box, then ask me to check it. Even a fraction or short equation is enough to begin.'
-  if (type === 'check') {
-    if (context.includes('mean') || context.includes('frequency')) return 'Good—you have started the method. Check that you used every relevant frequency, and for a grouped mean make sure each frequency is multiplied by its class midpoint before dividing by the total frequency.'
-    if (context.includes('venn')) return 'Good—you have started the method. Check the intersections first, then confirm that all regions—including the area outside the circles—add to the stated total.'
-    if (context.includes('without replacement') || context.includes('chooses two') || context.includes('chosen')) return 'Good—you have started the method. Check that every number comes from the question and that the denominator changes after a selection when there is no replacement.'
-    return 'Good—you have started the method. Check that your favourable outcomes are over the correct total, then simplify only after the probability setup is complete.'
-  }
-  if (type === 'concept') {
-    if (context.includes('venn')) return 'In a Venn diagram, start with the deepest overlap and work outwards. The total of every region, including outside the circles, must equal the universal set.'
-    if (context.includes('modal') || context.includes('mode')) return 'The modal class is the interval with the greatest frequency. You do not need to calculate an exact value inside that interval.'
-    if (context.includes('median')) return 'The median lies at the middle position in the ordered data. Use cumulative frequency to find which interval contains that position.'
-    if (context.includes('mean') || context.includes('frequency')) return 'For grouped data, use each class midpoint as the representative value, multiply it by its frequency, then divide the total by the total frequency.'
-    if (context.includes('probability')) return 'For probability, divide favourable outcomes by all equally likely outcomes. Multiply probabilities along one path; add probabilities for separate valid paths.'
-    return 'Start by naming the mathematical idea being tested, then connect the information given in the question to the rule or formula you need.'
-  }
-  if (type === 'hint') {
-    if (context.includes('without replacement') || context.includes('chooses two') || context.includes('chosen')) return 'Write the probability for the first selection, then update both the favourable count and the total before writing the second probability. Multiply along the path.'
-    if (context.includes('venn')) return 'Look for an intersection whose value can be found directly. Fill the overlaps before the regions belonging to only one set.'
-    if (context.includes('mean')) return 'Add a midpoint row to the table first. Your next calculation should use frequency × midpoint for every class.'
-    if (context.includes('more than') || context.includes('less than')) return 'Identify which frequency or outcome count satisfies the inequality, then place it over the total number of outcomes.'
-    if (context.includes('probability')) return 'Name the event you want, count its favourable outcomes, and compare that count with the total number of equally likely outcomes.'
-    return 'Underline what the question gives you and what it asks you to find. Write one useful rule, formula, or relationship before substituting values.'
-  }
-  if (message.toLowerCase().includes('answer')) return 'I can help you reach the answer, but I will start with the method. Tell me which step feels uncertain, or use the mark-scheme button when you are ready to reveal it.'
-  return 'Let’s take one small step. Write the probability expression or calculation you think should come first, and I’ll help you check the setup.'
-}
-
-function AiTutorPanel({ topic, question, activePart, activeAnswer, request, onRequest }) {
-  const [messages, setMessages] = useState([])
-  const [chatInput, setChatInput] = useState('')
+function AiTutorPanel({ topic, question, activePart, reviews, reviewState, onRequest }) {
   const messageEndRef = useRef(null)
   const isEmpty = Boolean(question.isPlaceholder)
-
-  useEffect(() => {
-    setMessages([])
-    setChatInput('')
-  }, [question.id])
-
-  useEffect(() => {
-    if (!request) return
-    const reply = buildTutorReply(request.type, question, request.part, request.answer)
-    const labels = { hint: 'Hint', concept: 'Concept', check: 'Approach check' }
-    setMessages((current) => [...current, { id: `${request.id}-reply`, role: 'assistant', text: reply, label: labels[request.type] || 'Tutor' }])
-  }, [question, request])
+  const partReviews = reviews.filter((review) => review.question_part_id === activePart.id)
+  const isReviewing = reviewState === 'reviewing'
 
   useEffect(() => {
     messageEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
-  }, [messages])
-
-  const sendMessage = (event) => {
-    event.preventDefault()
-    const message = chatInput.trim()
-    if (!message) return
-    const stamp = Date.now()
-    setMessages((current) => [
-      ...current,
-      { id: `${stamp}-student`, role: 'student', text: message },
-      { id: `${stamp}-assistant`, role: 'assistant', text: buildTutorReply('message', question, activePart, activeAnswer, message), label: 'Tutor' },
-    ])
-    setChatInput('')
-  }
+  }, [partReviews.length, isReviewing])
 
   return <aside className="ai-tutor-panel" aria-label="AI tutor">
     <header className="ai-tutor-header">
       <div className="ai-tutor-avatar"><Bot size={21} /></div>
-      <div><div className="ai-tutor-title"><h2>AI Tutor</h2><span>Demo mode</span></div><p><i /> Ready to help</p></div>
+      <div><div className="ai-tutor-title"><h2>AI Tutor</h2><span>Live review</span></div><p><i /> {isReviewing ? 'Reviewing your work' : 'Ready to help'}</p></div>
     </header>
     <div className="ai-tutor-context"><span>Current focus</span><strong>{isEmpty ? `${topic.number} ${topic.title}` : `Question ${question.number} ${activePart.label}`}</strong><p>{isEmpty ? 'Questions are being prepared' : `${activePart.marks} ${activePart.marks === 1 ? 'mark' : 'marks'} · Guidance without giving the answer away`}</p></div>
     <div className="ai-tutor-conversation" aria-live="polite">
-      {messages.length === 0 ? <div className="tutor-welcome">
+      {partReviews.length === 0 && !isReviewing ? <div className="tutor-welcome">
         <div><Sparkles size={22} /></div>
         <h3>{isEmpty ? `Your ${topic.title} tutor is ready.` : 'Try it—I’m here if you get stuck.'}</h3>
-        <p>{isEmpty ? 'When a reviewed question is loaded, I will follow its active part and help without taking over the solution.' : 'I can give a small hint, explain the idea, or check your setup while you keep control of the solution.'}</p>
-      </div> : <div className="tutor-messages">{messages.map((message) => <div className={`tutor-message ${message.role}`} key={message.id}>{message.label && <span>{message.label}</span>}<p>{message.text}</p></div>)}<div ref={messageEndRef} /></div>}
+        <p>{isEmpty ? 'When a reviewed question is loaded, I will follow its active part and help without taking over the solution.' : 'Write a step or attach a photo, then ask for a hint or a complete check.'}</p>
+      </div> : <div className="tutor-messages">
+        {partReviews.map((review) => <div className="tutor-message assistant" key={review.id}>
+          <span>{review.status === 'completed' ? `Attempt ${review.attempt_number} · ${review.marks_awarded}/${review.marks_maximum} marks` : `Attempt ${review.attempt_number}`}</span>
+          <p>{review.feedback || review.error_message || 'This review did not complete.'}</p>
+        </div>)}
+        {isReviewing && <div className="tutor-message assistant"><span>Reviewing</span><p><LoaderCircle className="spin" size={16} /> Reading your method and preparing the next hint…</p></div>}
+        <div ref={messageEndRef} />
+      </div>}
     </div>
     <div className="tutor-quick-actions" aria-label="Tutor shortcuts">
-      <button type="button" disabled={isEmpty} onClick={() => onRequest('hint', activePart, activeAnswer)}><Lightbulb size={15} /> Hint</button>
-      <button type="button" disabled={isEmpty} onClick={() => onRequest('concept', activePart, activeAnswer)}><BookOpenCheck size={15} /> Explain concept</button>
-      <button type="button" disabled={isEmpty} onClick={() => onRequest('check', activePart, activeAnswer)}><CheckCircle2 size={15} /> Check approach</button>
+      <button type="button" disabled={isEmpty || isReviewing} onClick={() => onRequest('hint', activePart)}><Lightbulb size={15} /> Give a hint</button>
+      <button type="button" disabled={isEmpty || isReviewing} onClick={() => onRequest('check', activePart)}><CheckCircle2 size={15} /> Check my work</button>
     </div>
-    <form className="tutor-chat-form" onSubmit={sendMessage}>
-      <label className="sr-only" htmlFor="tutor-message">Ask the AI tutor</label>
-      <input id="tutor-message" value={chatInput} onChange={(event) => setChatInput(event.target.value)} placeholder={isEmpty ? 'Available with a question' : 'Ask about this step…'} disabled={isEmpty} />
-      <button type="submit" aria-label="Send message" disabled={isEmpty || !chatInput.trim()}><Send size={18} /></button>
-    </form>
   </aside>
 }
 
@@ -286,7 +251,6 @@ function createEmptyQuestion(topic) {
       label: '',
       marks: 0,
       prompt: [],
-      mark_scheme: { answer: '', marking_points: [] },
     }],
   }
 }
@@ -339,7 +303,8 @@ export default function QuestionPracticePage() {
   const [saveMessages, setSaveMessages] = useState({})
   const [responseLoadError, setResponseLoadError] = useState('')
   const [activePartId, setActivePartId] = useState('')
-  const [tutorRequest, setTutorRequest] = useState(null)
+  const [reviews, setReviews] = useState([])
+  const [reviewStates, setReviewStates] = useState({})
   const answersRef = useRef({})
   const saveTimersRef = useRef(new Map())
   const saveVersionsRef = useRef(new Map())
@@ -374,13 +339,14 @@ export default function QuestionPracticePage() {
     setSaveMessages({})
     setResponseLoadError('')
     setActivePartId('')
-    setTutorRequest(null)
+    setReviews([])
+    setReviewStates({})
     saveTimersRef.current.forEach((timer) => clearTimeout(timer))
     saveTimersRef.current.clear()
     if (!topic) return undefined
     let cancelled = false
-    getStudentResponses(topic.number)
-      .then((responses) => {
+    Promise.all([getStudentResponses(topic.number), getTutorReviews(topic.number)])
+      .then(([responses, restoredReviews]) => {
         if (cancelled) return
         const restoredAnswers = {}
         const restoredAttachments = {}
@@ -394,6 +360,7 @@ export default function QuestionPracticePage() {
         setAnswers(restoredAnswers)
         setAttachments(restoredAttachments)
         setSaveStates(restoredStates)
+        setReviews(restoredReviews)
       })
       .catch((error) => {
         if (!cancelled) setResponseLoadError(error.message)
@@ -421,7 +388,6 @@ export default function QuestionPracticePage() {
     const nextQuestion = questions[nextIndex]
     setQuestionIndex(nextIndex)
     setActivePartId(nextQuestion.parts[0].id)
-    setTutorRequest(null)
   }
 
   const persistAnswer = async (partId, value, status = 'draft') => {
@@ -509,19 +475,30 @@ export default function QuestionPracticePage() {
     }
   }
 
-  const askTutor = async (type, part, answer) => {
+  const askTutor = async (type, part) => {
     if (!hasQuestions) return
     setActivePartId(part.id)
-    if (type === 'check') {
-      clearTimeout(saveTimersRef.current.get(part.id))
-      saveTimersRef.current.delete(part.id)
-      try {
-        await persistAnswer(part.id, answer, 'ready_for_review')
-      } catch {
-        return
-      }
+    clearTimeout(saveTimersRef.current.get(part.id))
+    saveTimersRef.current.delete(part.id)
+    setReviewStates((current) => ({ ...current, [part.id]: 'reviewing' }))
+    try {
+      const saved = await persistAnswer(
+        part.id,
+        answersRef.current[part.id] || '',
+        'ready_for_review',
+      )
+      const review = await requestTutorReview(part.id, saved.revision, type)
+      setReviews((current) => {
+        const withoutDuplicate = current.filter((item) => item.id !== review.id)
+        return [...withoutDuplicate, review].sort((a, b) => a.attempt_number - b.attempt_number)
+      })
+      setReviewStates((current) => ({ ...current, [part.id]: 'complete' }))
+    } catch (error) {
+      setReviewStates((current) => ({ ...current, [part.id]: 'error' }))
+      setSaveStates((current) => ({ ...current, [part.id]: 'error' }))
+      setSaveMessages((current) => ({ ...current, [part.id]: error.message }))
+      getTutorReviews(topic.number).then(setReviews).catch(() => {})
     }
-    setTutorRequest({ id: Date.now(), type, part, answer })
   }
 
   const summary = hasQuestions
@@ -553,7 +530,7 @@ export default function QuestionPracticePage() {
             <nav className="practice-pagination" aria-label="Question navigation"><button type="button" onClick={() => moveTo(questionIndex - 1)} disabled={questionIndex === 0}><ChevronLeft size={18} /> Previous question</button><span>{questionIndex + 1} of {questions.length}</span><button type="button" onClick={() => moveTo(questionIndex + 1)} disabled={questionIndex === questions.length - 1}>Next question <ChevronRight size={18} /></button></nav>
           </> : <EmptyQuestionCard topic={topic} loading={isLoading} error={loadError} />}
         </div>
-        <AiTutorPanel topic={topic} question={question} activePart={activePart} activeAnswer={answers[activePart.id] || ''} request={tutorRequest} onRequest={askTutor} />
+        <AiTutorPanel topic={topic} question={question} activePart={activePart} reviews={reviews} reviewState={reviewStates[activePart.id] || 'idle'} onRequest={askTutor} />
       </div>
     </div>
   </main>

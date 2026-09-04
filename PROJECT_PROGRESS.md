@@ -25,9 +25,24 @@ The hackathon MVP is intentionally limited to Probability so that one topic can 
 | Probability notes | Complete, redesigned, and production-ready | 27 parsed pages are bundled explicitly for Vercel: 8.1 has 5 pages/42 blocks, 8.2 has 3 pages/35 blocks, and 8.3 has 19 pages/200 blocks. Learners see continuous study chapters with a concept-based lesson outline, worked-example and examiner-tip summaries, callouts, tables, figures, and KaTeX mathematics; PDF page boundaries remain internal metadata only. |
 | Practice-question sources | Collected, not parsed | `probability I.pdf` contains 20 numbered questions over 18 pages. Its mark scheme contains 17 pages and 115 total marks. |
 | Structured question bank | Complete for Probability I | All 20 questions, 53 assessable parts, source-page references, diagrams/tables, final answers, mark codes, and marking guidance are stored in reviewed JSON. The dataset validates to 115 marks. |
-| Interactive assessment | Input and persistence complete | The Probability practice workspace accepts typed working and up to four photographed solution pages per part, auto-saves them through the API, restores work after refresh, and marks check requests as ready for review. Real model responses, automatic marking, and attempt history remain planned. |
+| Interactive assessment | Complete for the tutor MVP | The Probability workspace accepts typed/image work, creates immutable review attempts, restores feedback after refresh, and prevents duplicate evaluation of the same revision. |
 | Content database and API | Complete for current Probability content | PostgreSQL schema, repeatable migrations/seeding, and a modular FastAPI read API cover Probability topics/subtopics, 20 questions, 53 parts, 82 marking points, and 3 note documents. Direct API and Vite-proxy requests are verified against the local PostgreSQL 18 database. |
-| Adaptive tutor AI | Planned | Learner state, evaluation, tutoring policy, and AI-quality evaluation remain future milestones; its typed/image input boundary is now ready. |
+| Adaptive tutor AI | Complete for the basic MVP | Image attempts use vision-first transcription, all attempts receive schema-validated marking, and a deterministic policy escalates from guiding questions to stronger hints. |
+
+### Implementation update - 3 September 2026: AI tutor MVP
+
+- Added immutable `tutor_reviews` and AI-ready review-image snapshots keyed to an
+  exact response revision.
+- Added a two-stage image path: vision transcription first, followed by a strict
+  structured evaluation. Typed-only attempts skip the vision call.
+- Added progressive deterministic hint levels, persisted feedback history,
+  duplicate-request protection, revision conflict checks, provider failure
+  recovery, and a small per-session review limit.
+- Removed answers and marking points from the normal question-bank response;
+  mark schemes now load only after an explicit learner reveal.
+- Replaced the hard-coded demo tutor with the live backend review flow and
+  feedback restoration after refresh.
+- Added automated policy and full API review tests without spending model calls.
 
 ### Implementation update - 3 September 2026
 

@@ -202,6 +202,15 @@ def add_attachment(
             image_data,
         ),
     )
+    connection.execute(
+        """
+        UPDATE student_responses
+        SET status = 'draft', revision = revision + 1,
+            updated_at = NOW(), ready_at = NULL
+        WHERE id = %s
+        """,
+        (response_id,),
+    )
     return attachment_id
 
 
@@ -229,10 +238,19 @@ def delete_attachment(
         WHERE ra.id = %s
           AND ra.student_response_id = sr.id
           AND sr.learner_session_id = %s
-        RETURNING ra.id
+        RETURNING ra.id, ra.student_response_id
         """,
         (attachment_id, session_id),
     ).fetchone()
     if deleted is not None:
+        connection.execute(
+            """
+            UPDATE student_responses
+            SET status = 'draft', revision = revision + 1,
+                updated_at = NOW(), ready_at = NULL
+            WHERE id = %s
+            """,
+            (deleted["student_response_id"],),
+        )
         touch_session(connection, session_id)
     return deleted is not None

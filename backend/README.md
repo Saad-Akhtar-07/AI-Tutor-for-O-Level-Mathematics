@@ -1,4 +1,4 @@
-# Content API
+# Mathematics Tutor API
 
 This backend is the runtime boundary between React and PostgreSQL. The browser
 never receives database credentials and never connects directly to PostgreSQL.
@@ -37,6 +37,7 @@ The API listens at `http://127.0.0.1:8000`. Interactive documentation is at
 - `GET /api/v1/health`
 - `GET /api/v1/topics/{topic_number}/question-summary`
 - `GET /api/v1/topics/{topic_number}/questions`
+- `GET /api/v1/question-parts/{question_part_id}/solution`
 - `GET /api/v1/subtopics/{subtopic_code}/notes`
 - `POST /api/v1/learner-sessions`
 - `GET /api/v1/learner-sessions/{session_id}/responses`
@@ -44,6 +45,9 @@ The API listens at `http://127.0.0.1:8000`. Interactive documentation is at
 - `POST /api/v1/learner-sessions/{session_id}/responses/{question_part_id}/attachments`
 - `GET /api/v1/learner-sessions/{session_id}/attachments/{attachment_id}/content`
 - `DELETE /api/v1/learner-sessions/{session_id}/attachments/{attachment_id}`
+- `POST /api/v1/learner-sessions/{session_id}/responses/{question_part_id}/reviews`
+- `GET /api/v1/learner-sessions/{session_id}/reviews`
+- `GET /api/v1/learner-sessions/{session_id}/reviews/{review_id}`
 
 All public responses are validated with Pydantic contracts before being sent to
 React. PostgreSQL connections come from an application-managed connection pool.
@@ -57,7 +61,9 @@ With PostgreSQL running and seeded:
 ```
 
 The integration test exercises the real database through FastAPI and verifies
-question counts, marks, parts, notes, missing-content behavior, and health.
+question counts, marks, parts, notes, learner input, immutable tutor reviews,
+idempotency, image snapshots, missing-content behavior, and health. Model calls
+are replaced with deterministic fakes during automated tests.
 
 For a quick database-only invariant check:
 
@@ -81,7 +87,42 @@ PNG, or WebP solution images of at most 8 MB each.
 
 Uploads are decoded as images, orientation-corrected, re-encoded without EXIF
 metadata, and deduplicated before their bytes and AI-friendly metadata are stored
-in PostgreSQL. `ready_for_review` marks the response state that should enter the
-future tutor/evaluation loop. Anonymous UUIDs are an MVP mechanism;
+in PostgreSQL. Changing text or attachments increments the response revision
+and returns it to `draft`; `ready_for_review` allows that exact revision to enter
+the tutor loop. Anonymous UUIDs are an MVP mechanism;
 account authentication should replace them before handling real student data in
 production.
+
+## AI tutor reviews
+
+Add `OPENROUTER_API_KEY` to `backend/.env` or the project-root `.env`. Development
+defaults both AI stages to `openrouter/free`; set exact model IDs before a public
+demo:
+
+```env
+OPENROUTER_VISION_MODEL=openrouter/free
+OPENROUTER_EVALUATION_MODEL=openrouter/free
+OPENROUTER_TIMEOUT_SECONDS=90
+```
+
+Every submitted revision creates one immutable `tutor_reviews` snapshot. If the
+attempt contains images, the backend first creates bounded 2048-pixel copies and
+asks a vision model to transcribe only visible work. A second, structured call
+evaluates the typed work plus transcription against the private mark scheme.
+Typed-only attempts skip the vision call. A deterministic policy then exposes a
+guiding question, targeted hint, or worked next step based on prior attempts.
+
+The normal question-bank response no longer includes answers. Mark schemes load
+only when the learner explicitly reveals one. Review endpoints return
+student-safe feedback and never return the internal snapshot or evaluation.
+
+After automated verification, run one disposable real-provider smoke test with:
+
+```powershell
+.\backend\.venv\Scripts\python.exe -m backend.scripts.smoke_tutor
+```
+
+It creates an image-only response, runs both model stages, prints only the safe
+result summary, and deletes the temporary learner session afterward. It consumes
+two provider requests and can return HTTP 429 when the OpenRouter quota is
+exhausted.

@@ -7,14 +7,15 @@ const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3
 let sessionPromise = null
 
 async function apiRequest(path, options = {}) {
+  const { timeoutMs = REQUEST_TIMEOUT_MS, ...fetchOptions } = options
   const controller = new AbortController()
-  const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS)
+  const timeout = setTimeout(() => controller.abort(), timeoutMs)
   try {
     const response = await fetch(`${API_BASE_URL}${API_PREFIX}${path}`, {
-      ...options,
+      ...fetchOptions,
       headers: {
         Accept: 'application/json',
-        ...options.headers,
+        ...fetchOptions.headers,
       },
       signal: controller.signal,
     })
@@ -123,4 +124,25 @@ export function removeSolutionImage(attachmentId) {
 
 export function attachmentContentUrl(contentUrl) {
   return `${API_BASE_URL}${contentUrl}`
+}
+
+export function getTutorReviews(topicNumber) {
+  return withSession(async (sessionId) => {
+    const data = await apiRequest(
+      `/learner-sessions/${sessionId}/reviews?topic_number=${encodeURIComponent(topicNumber)}`,
+    )
+    return data.reviews
+  })
+}
+
+export function requestTutorReview(questionPartId, expectedRevision, intent = 'check') {
+  return withSession((sessionId) => apiRequest(
+    `/learner-sessions/${sessionId}/responses/${encodeURIComponent(questionPartId)}/reviews`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ expected_revision: expectedRevision, intent }),
+      timeoutMs: 120000,
+    },
+  ))
 }

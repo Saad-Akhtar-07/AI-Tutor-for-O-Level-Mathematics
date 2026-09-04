@@ -5,6 +5,7 @@ from .config import get_settings
 from .database import database_lifespan
 from .routers.content import router as content_router
 from .routers.submissions import router as submissions_router
+from .routers.tutor import router as tutor_router
 
 
 def create_app() -> FastAPI:
@@ -24,6 +25,7 @@ def create_app() -> FastAPI:
     )
     application.include_router(content_router)
     application.include_router(submissions_router)
+    application.include_router(tutor_router)
     return application
 
 

@@ -43,6 +43,10 @@ export function getQuestionBank(topicNumber) {
   return cachedFetch(questionBankCache, key, `/topics/${encodeURIComponent(key)}/questions`)
 }
 
+export function getQuestionPartSolution(questionPartId) {
+  return fetchContent(`/question-parts/${encodeURIComponent(questionPartId)}/solution`)
+}
+
 export async function getQuestionCount(topicNumber) {
   const key = String(topicNumber)
   const summary = await cachedFetch(

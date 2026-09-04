@@ -38,7 +38,7 @@ React syllabus and study-note interface              [implemented]
 Typed/image response storage                         [implemented]
                                                             |
                                                             v
-Learner state -> Adaptive policy -> Tutor LLM -> Evaluator  [planned]
+Immutable review -> Vision -> Evaluator -> Hint policy      [implemented]
 ```
 
 ## Technology
@@ -166,11 +166,14 @@ Source PDFs and generated note extracts are intentionally excluded from version 
 
 1. Complete and quality-check the structured content pipeline for the selected MVP topics.
 2. Add diagnostic questions and an explicit per-concept learner-state model.
-3. Implement the rule-based adaptive tutoring policy and tutor response generation.
+3. Implement the rule-based adaptive tutoring policy and tutor response generation. **Complete for the Probability MVP.**
 4. Add session persistence and progress visualization.
 5. Build an evaluator for mathematical correctness, grounding, personalization, and pedagogical action quality.
 6. Test complete learner journeys, refine the interface, deploy the MVP, and record the demonstration.
 
 ## Status
 
-This is an active hackathon prototype. The repository accurately separates implemented capabilities from the planned adaptive tutoring system.
+This is an active hackathon prototype. The Probability workspace now supports
+real, persisted AI reviews with vision-first handwriting transcription,
+structured marking, and progressive hints. Broader learner mastery and
+curriculum sequencing remain planned.

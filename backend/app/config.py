@@ -7,11 +7,17 @@ from pydantic import BaseModel
 
 BACKEND_ROOT = Path(__file__).resolve().parents[1]
 load_dotenv(BACKEND_ROOT / ".env")
+load_dotenv(BACKEND_ROOT.parent / ".env")
 
 
 class Settings(BaseModel):
     database_url: str
     cors_origins: list[str]
+    openrouter_api_key: str
+    openrouter_base_url: str
+    openrouter_vision_model: str
+    openrouter_evaluation_model: str
+    openrouter_timeout_seconds: float
 
 
 @lru_cache
@@ -32,4 +38,20 @@ def get_settings() -> Settings:
         ).split(",")
         if origin.strip()
     ]
-    return Settings(database_url=database_url, cors_origins=origins)
+    return Settings(
+        database_url=database_url,
+        cors_origins=origins,
+        openrouter_api_key=os.getenv("OPENROUTER_API_KEY", "").strip(),
+        openrouter_base_url=os.getenv(
+            "OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1/chat/completions"
+        ).strip(),
+        openrouter_vision_model=os.getenv(
+            "OPENROUTER_VISION_MODEL", "openrouter/free"
+        ).strip(),
+        openrouter_evaluation_model=os.getenv(
+            "OPENROUTER_EVALUATION_MODEL", "openrouter/free"
+        ).strip(),
+        openrouter_timeout_seconds=float(
+            os.getenv("OPENROUTER_TIMEOUT_SECONDS", "90")
+        ),
+    )

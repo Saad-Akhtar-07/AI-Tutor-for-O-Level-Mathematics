@@ -32,7 +32,10 @@ class QuestionPartResponse(BaseModel):
     marks: int = Field(ge=0)
     prompt: list[JsonBlock]
     answer_suffix: str | None = None
-    mark_scheme: MarkSchemeResponse
+
+
+class QuestionPartSolutionResponse(MarkSchemeResponse):
+    question_part_id: str
 
 
 class QuestionResponse(BaseModel):

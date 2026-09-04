@@ -9,6 +9,7 @@ from ..schemas.content import (
     HealthResponse,
     NotesDocumentResponse,
     QuestionBankResponse,
+    QuestionPartSolutionResponse,
     QuestionSummaryResponse,
 )
 
@@ -42,6 +43,18 @@ def topic_questions(topic_number: str, connection: DatabaseConnection) -> dict:
     if bank is None:
         raise HTTPException(status_code=404, detail="No question bank for this topic")
     return bank
+
+
+@router.get(
+    "/question-parts/{question_part_id}/solution",
+    response_model=QuestionPartSolutionResponse,
+    tags=["content"],
+)
+def question_part_solution(question_part_id: str, connection: DatabaseConnection) -> dict:
+    solution = content_repository.get_question_part_solution(connection, question_part_id)
+    if solution is None:
+        raise HTTPException(status_code=404, detail="Question part not found")
+    return solution
 
 
 @router.get(
