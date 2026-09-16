@@ -1,4 +1,4 @@
-const API_BASE_URL = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '')
+const API_BASE_URL = (import.meta.env?.VITE_API_URL || '').replace(/\/$/, '')
 const API_PREFIX = '/api/v1'
 const REQUEST_TIMEOUT_MS = 15000
 const SESSION_STORAGE_KEY = 'ai-tutor-learner-session-v1'
@@ -30,9 +30,9 @@ async function apiRequest(path, options = {}) {
       throw error
     }
     if (response.status === 204) return null
-    return response.json()
+    return await response.json()
   } catch (error) {
-    if (error.name === 'AbortError') throw new Error('The request timed out. Please try again.')
+    if (error.name === 'AbortError') throw new Error('The connection took too long. Checking for your saved result; please wait before retrying.')
     throw error
   } finally {
     clearTimeout(timeout)
@@ -142,7 +142,7 @@ export function requestTutorReview(questionPartId, expectedRevision, intent = 'c
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ expected_revision: expectedRevision, intent }),
-      timeoutMs: 120000,
+      timeoutMs: 95000,
     },
   ))
 }
@@ -163,7 +163,7 @@ export function sendTutorChatMessage(questionPartId, message, clientMessageId) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ client_message_id: clientMessageId, message }),
-      timeoutMs: 120000,
+      timeoutMs: 60000,
     },
   ))
 }

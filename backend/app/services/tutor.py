@@ -30,7 +30,9 @@ mark scheme allows it. Distinguish conceptual errors from arithmetic slips. Do n
 unseen work. For partial or incorrect work, none of positive_observation, guiding_question,
 or next_step_hint may state the final answer. The guiding_question must be a useful question.
 The next_step_hint may identify the method and next operation without revealing the result.
-Return only the requested JSON structure and never address the learner outside its fields."""
+Include exactly one criteria entry per supplied marking point, copying its code exactly.
+If no marking points are supplied, return criteria as [] and judge against the supplied answer.
+Keep observed_work concise. Return only the requested JSON structure and never address the learner outside its fields."""
 
 SOCRATIC_CHAT_SYSTEM_PROMPT = """You are a warm, precise Socratic mathematics tutor for
 Cambridge O Level Mathematics (Syllabus D 4024). Help the learner reason through only the
@@ -118,6 +120,11 @@ def transcribe_images(
         ],
         schema_name="solution_transcription",
         json_schema=VisionTranscription.model_json_schema(),
+        max_tokens=3000,
+        fallback_models=settings.openrouter_vision_fallback_models,
+        groq_model=settings.groq_vision_model,
+        groq_json_mode=True,
+        validate=lambda completion: _parse_model(VisionTranscription, completion),
     )
     return _parse_model(VisionTranscription, completion), completion
 
@@ -138,6 +145,22 @@ def evaluate_snapshot(
         },
         "previous_review": snapshot.get("previous_review"),
     }
+    expected_codes = [point["code"] for point in snapshot["mark_scheme"]["marking_points"]]
+    evaluation_schema = EvaluationResult.model_json_schema()
+    evaluation_schema["properties"]["criteria"].update(minItems=len(expected_codes), maxItems=len(expected_codes))
+    if expected_codes:
+        evaluation_schema["$defs"]["CriterionEvaluation"]["properties"]["code"]["enum"] = list(set(expected_codes))
+
+    def validate_evaluation(completion):
+        evaluation = _parse_model(EvaluationResult, completion)
+        maximum = int(snapshot["target_part"]["marks"])
+        actual_codes = [point.code for point in evaluation.criteria]
+        if (evaluation.marks_awarded > maximum
+                or (evaluation.assessment == "correct" and evaluation.marks_awarded != maximum)
+                or sorted(actual_codes) != sorted(expected_codes)):
+            raise OpenRouterError("The AI assessment is inconsistent with the mark scheme.", code="invalid_marks")
+        return evaluation
+
     completion = client.structured_completion(
         model=settings.openrouter_evaluation_model,
         messages=[
@@ -148,21 +171,13 @@ def evaluate_snapshot(
             },
         ],
         schema_name="mathematics_evaluation",
-        json_schema=EvaluationResult.model_json_schema(),
+        json_schema=evaluation_schema,
+        max_tokens=2200,
+        fallback_models=settings.openrouter_evaluation_fallback_models,
+        groq_model=settings.groq_evaluation_model,
+        validate=validate_evaluation,
     )
-    evaluation = _parse_model(EvaluationResult, completion)
-    maximum = int(snapshot["target_part"]["marks"])
-    if evaluation.marks_awarded > maximum:
-        raise OpenRouterError(
-            "The AI provider returned marks outside the valid range.",
-            code="invalid_marks",
-        )
-    if evaluation.assessment == "correct" and evaluation.marks_awarded != maximum:
-        raise OpenRouterError(
-            "The AI provider returned an inconsistent assessment.",
-            code="invalid_marks",
-        )
-    return evaluation, completion
+    return validate_evaluation(completion), completion
 
 
 def run_tutor_models(
@@ -170,7 +185,7 @@ def run_tutor_models(
     snapshot: dict[str, Any],
     images: list[dict[str, Any]],
 ) -> TutorModelResult:
-    client = OpenRouterClient(settings)
+    client = OpenRouterClient(settings, budget_seconds=settings.tutor_review_budget_seconds)
     vision, vision_completion = transcribe_images(client, settings, images)
     evaluation, evaluation_completion = evaluate_snapshot(
         client, settings, snapshot, vision
@@ -195,9 +210,20 @@ def run_tutor_chat(
     snapshot: dict[str, Any],
     learner_message: str,
 ) -> TutorChatResult:
-    client = OpenRouterClient(settings)
+    client = OpenRouterClient(settings, budget_seconds=settings.tutor_chat_budget_seconds)
+    # Preserve complete recent turns within a character budget. Older dialogue
+    # must not crowd out the question and current learner work on free tiers.
+    conversation = []
+    remaining = 8000
+    for turn in reversed(snapshot.get("conversation", [])):
+        size = len(json.dumps(turn, ensure_ascii=False))
+        if size > remaining:
+            break
+        conversation.append(turn)
+        remaining -= size
     chat_input = {
         **snapshot,
+        "conversation": list(reversed(conversation)),
         "current_learner_message": learner_message,
     }
     completion = client.structured_completion(
@@ -212,6 +238,10 @@ def run_tutor_chat(
         schema_name="socratic_tutor_reply",
         json_schema=SocraticReply.model_json_schema(),
         temperature=0.4,
+        max_tokens=1000,
+        fallback_models=settings.openrouter_chat_fallback_models,
+        groq_model=settings.groq_chat_model,
+        validate=lambda completion: _parse_model(SocraticReply, completion),
     )
     return TutorChatResult(
         reply=_parse_model(SocraticReply, completion),

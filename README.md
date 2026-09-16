@@ -102,7 +102,7 @@ React + Vite UI <---- versioned REST API ----> FastAPI
                                       reviews, and tutor chat
                                                 |
                                                 v
-                                    OpenRouter-compatible models
+                                    Groq + OpenRouter free models
                                    transcription, evaluation, chat
 ```
 
@@ -123,7 +123,7 @@ Important runtime boundaries:
   Lucide icons
 - **Backend:** Python, FastAPI, Pydantic, Psycopg, Pillow
 - **Database:** PostgreSQL with ordered, idempotent SQL migrations
-- **AI:** OpenRouter-compatible multimodal chat-completions models
+- **AI:** Groq text models and OpenRouter multimodal models
 - **Content pipeline:** PyMuPDF, vision extraction, schema validation, resumable
   processing
 - **Testing:** Pytest integration and policy tests plus a production frontend
@@ -136,7 +136,7 @@ Important runtime boundaries:
 - Python 3.10 or later
 - Node.js 20.19 or later
 - PostgreSQL (the local project configuration uses port `5433`)
-- An OpenRouter API key for real AI reviews and chat
+- A free Groq API key for fast text tutoring, plus an OpenRouter key for photos and backup
 
 ### 1. Install the backend
 
@@ -169,21 +169,69 @@ If PostgreSQL is running on another port, pass it explicitly:
 
 ### 3. Configure the AI provider
 
-Open `backend/.env` and add:
+Open `backend/.env` and configure the free-tier route (all routing options are in
+[`backend/.env.example`](backend/.env.example)):
 
 ```env
-OPENROUTER_API_KEY=your_key_here
-OPENROUTER_VISION_MODEL=openrouter/free
-OPENROUTER_EVALUATION_MODEL=openrouter/free
-OPENROUTER_CHAT_MODEL=openrouter/free
+GROQ_API_KEY=your_groq_key_here
+AI_TEXT_PROVIDER=auto
+GROQ_CHAT_MODEL=openai/gpt-oss-20b
+GROQ_EVALUATION_MODEL=openai/gpt-oss-120b
+OPENROUTER_API_KEY=your_openrouter_key_here
+AI_VISION_PROVIDER=openrouter
+OPENROUTER_VISION_MODEL=nex-agi/nex-n2.5-mini:free
+OPENROUTER_EVALUATION_MODEL=nex-agi/nex-n2.5-mini:free
+OPENROUTER_CHAT_MODEL=nex-agi/nex-n2.5-mini:free
+OPENROUTER_VISION_FALLBACK_MODELS=dots-studio/dots-3-note-preview:free,nex-agi/nex-n2.5-pro:free
+OPENROUTER_EVALUATION_FALLBACK_MODELS=nex-agi/nex-n2.5-pro:free,openrouter/free
+OPENROUTER_CHAT_FALLBACK_MODELS=nex-agi/nex-n2.5-pro:free,openrouter/free
 OPENROUTER_DATA_COLLECTION=deny
-OPENROUTER_TIMEOUT_SECONDS=90
+OPENROUTER_TIMEOUT_SECONDS=22
 ```
 
-The free router is convenient during development. For a reliable public demo,
-pin tested, structured-output-capable model IDs instead of relying on
-`openrouter/free`. Keep `OPENROUTER_DATA_COLLECTION=deny` unless users have made
-an informed privacy choice.
+`auto` uses Groq when its key is present, with OpenRouter as a backup. Without a
+Groq key, OpenRouter still works. `AI_TEXT_PROVIDER=openrouter` forces the original
+provider. A Groq-only setup supports typed work and chat; photos need a vision
+provider. Keep your Groq account on its Free plan to stay within the free-only setup.
+
+Groq chat and marking use strict structured outputs; all results are validated
+before display. OpenRouter routing keeps the configured privacy policy across
+fallbacks. That policy does not control Groq: review its account data settings
+separately. Some free OpenRouter endpoints require `allow`; do not loosen privacy
+settings just to make a request succeed.
+
+Free services can have outages and shared quotas. No paid OpenRouter model is
+included in this configuration, and backups cannot bypass account-wide limits.
+Restart the backend after changing `.env`. Re-run the smoke test before your demo
+because free model availability changes.
+
+### Reliability and demo checks
+
+- Provider calls have a 22-second attempt limit, at most two attempts per stage,
+  and total model budgets of 35 seconds for chat and 65 seconds for a review.
+  These are failure cutoffs, not expected response times. Image transcription and
+  marking share the review budget. Legacy 90-second attempt settings are capped at 30.
+- Slow calls release their database connections. Saving and lessons remain usable.
+- Rate-limit cooldowns respect `Retry-After`; retries do not hammer an exhausted key.
+- Refresh and lost connections recover saved results through polling. Interrupted
+  requests become retryable after 120 seconds. Duplicate retries reuse the same record.
+- Hints can be requested before writing an answer. They use chat, not a marking call.
+- During an outage, lesson notes and explicit mark-scheme reveal remain available.
+  The app never invents grades or presents canned replies as live AI output.
+
+Quick text check (uses synthetic work and deletes its temporary session):
+
+```powershell
+.\backend\.venv\Scripts\python.exe -m backend.scripts.smoke_tutor --text-only
+```
+
+Omit `--text-only` to test a photo review plus chat. Successful checks print elapsed
+times and assert the expected mark, rather than only checking HTTP success.
+
+Provider references: [Groq structured outputs](https://console.groq.com/docs/structured-outputs),
+[Groq limits](https://console.groq.com/docs/rate-limits),
+[OpenRouter routing](https://openrouter.ai/docs/guides/routing/provider-selection), and
+[OpenRouter error handling](https://openrouter.ai/docs/api/reference/errors-and-debugging).
 
 ### 4. Start the API
 
@@ -219,8 +267,9 @@ The verification command:
 
 1. compiles the backend and setup scripts;
 2. runs the backend integration and tutoring-policy tests;
-3. verifies database counts, identifiers, and mark totals; and
-4. creates the production frontend build.
+3. verifies database counts, identifiers, and mark totals;
+4. tests frontend API timeout and recovery behavior; and
+5. creates the production frontend build.
 
 The current verified dataset contains:
 

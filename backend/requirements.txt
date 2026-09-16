@@ -6,3 +6,4 @@ pydantic>=2.13,<3
 python-multipart>=0.0.22,<0.1
 pillow>=12.1,<13
 requests>=2.32,<3
+httpx2>=2.12,<3

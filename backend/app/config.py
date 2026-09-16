@@ -1,8 +1,9 @@
 from functools import lru_cache
 from pathlib import Path
+from typing import Literal
 
 from dotenv import load_dotenv
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 BACKEND_ROOT = Path(__file__).resolve().parents[1]
@@ -19,7 +20,23 @@ class Settings(BaseModel):
     openrouter_evaluation_model: str
     openrouter_chat_model: str
     openrouter_data_collection: str
-    openrouter_timeout_seconds: float
+    openrouter_timeout_seconds: float = Field(default=22, gt=0, le=30)
+    openrouter_chat_fallback_models: list[str] = Field(default_factory=list)
+    openrouter_evaluation_fallback_models: list[str] = Field(default_factory=list)
+    openrouter_vision_fallback_models: list[str] = Field(default_factory=list)
+    tutor_chat_budget_seconds: float = Field(default=35, gt=0, le=45)
+    tutor_review_budget_seconds: float = Field(default=65, gt=0, le=80)
+    ai_text_provider: Literal["auto", "groq", "openrouter"] = "auto"
+    ai_vision_provider: Literal["auto", "groq", "openrouter"] = "openrouter"
+    groq_api_key: str = ""
+    groq_chat_model: str = "openai/gpt-oss-20b"
+    groq_evaluation_model: str = "openai/gpt-oss-120b"
+    groq_vision_model: str = ""
+
+    def requested_text_model(self, stage: Literal["chat", "evaluation"]) -> str:
+        if self.groq_api_key and self.ai_text_provider != "openrouter":
+            return "groq/" + getattr(self, f"groq_{stage}_model")
+        return getattr(self, f"openrouter_{stage}_model")
 
 
 @lru_cache
@@ -64,7 +81,25 @@ def get_settings() -> Settings:
             os.getenv("OPENROUTER_EVALUATION_MODEL", "openrouter/free"),
         ).strip(),
         openrouter_data_collection=data_collection,
-        openrouter_timeout_seconds=float(
-            os.getenv("OPENROUTER_TIMEOUT_SECONDS", "90")
-        ),
+        # Older installations used 90 seconds *per attempt*. Keep their env
+        # compatible while enforcing the browser/recovery deadline contract.
+        openrouter_timeout_seconds=min(30, float(
+            os.getenv("OPENROUTER_TIMEOUT_SECONDS", "22")
+        )),
+        **{
+            f"openrouter_{stage}_fallback_models": list(dict.fromkeys(
+                model.strip() for model in os.getenv(
+                    f"OPENROUTER_{stage.upper()}_FALLBACK_MODELS", ""
+                ).split(",") if model.strip()
+            ))[:2]
+            for stage in ("chat", "evaluation", "vision")
+        },
+        tutor_chat_budget_seconds=float(os.getenv("TUTOR_CHAT_BUDGET_SECONDS", "35")),
+        tutor_review_budget_seconds=float(os.getenv("TUTOR_REVIEW_BUDGET_SECONDS", "65")),
+        ai_text_provider=os.getenv("AI_TEXT_PROVIDER", "auto").strip().lower(),
+        ai_vision_provider=os.getenv("AI_VISION_PROVIDER", "openrouter").strip().lower(),
+        groq_api_key=os.getenv("GROQ_API_KEY", "").strip(),
+        groq_chat_model=os.getenv("GROQ_CHAT_MODEL", "openai/gpt-oss-20b").strip(),
+        groq_evaluation_model=os.getenv("GROQ_EVALUATION_MODEL", "openai/gpt-oss-120b").strip(),
+        groq_vision_model=os.getenv("GROQ_VISION_MODEL", "").strip(),
     )

@@ -2262,3 +2262,11 @@ html.is-resizing-tutor * {
   .empty-question-body { min-height: 370px; padding: 42px 22px 36px; }
   .empty-question-body h3 { font-size: 19px; }
 }
+.tutor-availability-note {
+  padding: 10px 16px;
+  margin: 0;
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+.tutor-availability-note a { text-decoration: underline; }

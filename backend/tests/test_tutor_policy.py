@@ -46,3 +46,29 @@ def test_socratic_reply_schema_rejects_answer_reveals() -> None:
             should_revise_work=False,
             reveals_final_answer=True,
         )
+
+
+def test_chat_context_is_bounded_without_mutating_saved_history(monkeypatch):
+    import copy
+    import json
+    from backend.app.config import get_settings
+    from backend.app.services.openrouter import ModelCompletion
+    from backend.app.services.tutor import run_tutor_chat
+    captured = {}
+    class Client:
+        def __init__(self, *args, **kwargs):
+            pass
+        def structured_completion(self, **kwargs):
+            captured.update(kwargs)
+            return ModelCompletion(json.dumps(dict(message="How many outcomes?", teaching_move="ask_question",
+                should_revise_work=False, reveals_final_answer=False)), "test", {})
+    monkeypatch.setattr("backend.app.services.tutor.OpenRouterClient", Client)
+    snapshot = {"learner_work": {"typed_work": "3/5"}, "conversation": [
+        {"learner": str(i) + "a" * 1000, "tutor": "b" * 1000} for i in range(12)]}
+    original = copy.deepcopy(snapshot)
+    run_tutor_chat(get_settings(), snapshot, "Help")
+    sent = json.loads(captured["messages"][1]["content"])
+    assert snapshot == original
+    assert 0 < len(sent["conversation"]) < 12
+    assert sent["conversation"][-1] == snapshot["conversation"][-1]
+    assert sent["learner_work"] == snapshot["learner_work"]

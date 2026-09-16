@@ -95,17 +95,11 @@ production.
 
 ## AI tutor reviews
 
-Add `OPENROUTER_API_KEY` to `backend/.env` or the project-root `.env`. Development
-defaults both AI stages to `openrouter/free`; set exact model IDs before a public
-demo:
-
-```env
-OPENROUTER_VISION_MODEL=openrouter/free
-OPENROUTER_EVALUATION_MODEL=openrouter/free
-OPENROUTER_CHAT_MODEL=openrouter/free
-OPENROUTER_DATA_COLLECTION=deny
-OPENROUTER_TIMEOUT_SECONDS=90
-```
+Configure `GROQ_API_KEY` and `OPENROUTER_API_KEY` in `backend/.env`.
+`AI_TEXT_PROVIDER=auto` prefers Groq for chat and assessment when its key is set;
+OpenRouter free models provide backup and image transcription. See the complete
+free-only configuration in [the root README](../README.md#3-configure-the-ai-provider)
+and [.env.example](.env.example). Restart the API after changing settings.
 
 Every submitted revision creates one immutable `tutor_reviews` snapshot. If the
 attempt contains images, the backend first creates bounded 2048-pixel copies and
@@ -129,22 +123,30 @@ Learner messages survive refresh, failed provider calls remain retryable, duplic
 client message IDs are idempotent, and chat is limited to 30 turns per session per
 10 minutes.
 
-For a public demo, pin `OPENROUTER_CHAT_MODEL` to a structured-output-capable
-instruction model rather than relying on `openrouter/free`.
+The provider client enforces deadlines across retries (35s chat, 65s review by
+default), two attempts per stage, output token limits and privacy-preserving
+OpenRouter fallbacks. It retries invalid structured results before returning an
+error. Slow provider calls hold no database pool connection. Per-process admission
+control allows six concurrent provider calls and fails excess requests quickly.
+Rate-limit cooldowns are per provider account and process; multi-worker deployments
+still share the upstream account quota.
 
-`OPENROUTER_DATA_COLLECTION` defaults to `deny`, so providers that may retain
-student work or train on it are excluded. Some free endpoints require
-`OPENROUTER_DATA_COLLECTION=allow`; use that setting only after making an
-explicit privacy decision. A funded, pinned model with a compatible privacy
-endpoint is the recommended demo and production configuration.
+Polling recovers saved results after refresh or a lost POST response. Requests
+abandoned by a process restart expire after 120 seconds and can be retried with the
+same immutable snapshot/idempotency key. Unexpected exceptions also mark requests
+failed. Chat creation is serialized per learner session to prevent duplicate inserts.
 
-After automated verification, run one disposable real-provider smoke test with:
+OpenRouter's `data_collection` setting applies only to OpenRouter routing. Groq
+uses its own data policy and account controls. Defaults remain `deny`; some free
+OpenRouter models may be unavailable under that policy. Never silently relax it.
+
+Run the disposable real-provider check:
 
 ```powershell
-.\backend\.venv\Scripts\python.exe -m backend.scripts.smoke_tutor
+.\backend\.venv\Scripts\python.exe -m backend.scripts.smoke_tutor --text-only
 ```
 
-It creates an image-only response, runs both model stages, prints only the safe
-result summary, and deletes the temporary learner session afterward. It consumes
-two provider requests and can return HTTP 429 when the OpenRouter quota is
-exhausted.
+Omit `--text-only` for photo transcription + assessment + chat. The script checks
+an expected correct answer, prints timings and removes only its synthetic session.
+It uses real free-tier quota. Automated tests use fake providers and exercise
+outages, timeouts, schema failures, rate limits, persistence and concurrent retries.

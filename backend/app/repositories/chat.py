@@ -56,6 +56,9 @@ def create_turn(
     requested_model: str,
     prompt_version: str,
 ) -> ChatCreation:
+    # Serialize creation for a session so simultaneous requests with the same
+    # idempotency key cannot race the unique INSERT or the rate-limit check.
+    connection.execute("SELECT id FROM learner_sessions WHERE id = %s FOR UPDATE", (session_id,))
     message = learner_message.strip()
     existing = connection.execute(
         """
@@ -243,6 +246,7 @@ def complete_turn(
     should_revise_work: bool,
     actual_model: str,
     usage: dict[str, Any],
+    claimed_at,
 ) -> dict[str, Any]:
     return connection.execute(
         """
@@ -250,7 +254,7 @@ def complete_turn(
         SET status = 'completed', tutor_message = %s, teaching_move = %s,
             should_revise_work = %s, actual_model = %s, usage = %s,
             completed_at = NOW()
-        WHERE id = %s
+        WHERE id = %s AND status = 'processing' AND started_at = %s
         RETURNING *
         """,
         (
@@ -259,22 +263,22 @@ def complete_turn(
             should_revise_work,
             actual_model,
             Jsonb(usage),
-            turn_id,
+            turn_id, claimed_at,
         ),
     ).fetchone()
 
 
 def fail_turn(
-    connection: Connection, turn_id: UUID, error_code: str, error_message: str
+    connection: Connection, turn_id: UUID, error_code: str, error_message: str, *, claimed_at
 ) -> None:
     connection.execute(
         """
         UPDATE tutor_chat_turns
         SET status = 'failed', error_code = %s, error_message = %s,
             completed_at = NOW()
-        WHERE id = %s
+        WHERE id = %s AND status = 'processing' AND started_at = %s
         """,
-        (error_code[:80], error_message[:500], turn_id),
+        (error_code[:80], error_message[:500], turn_id, claimed_at),
     )
 
 

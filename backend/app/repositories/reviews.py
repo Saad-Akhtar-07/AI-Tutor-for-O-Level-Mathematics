@@ -257,7 +257,7 @@ def claim_review(connection: Connection, review_id: UUID) -> bool:
         """
         UPDATE tutor_reviews
         SET status = 'processing', started_at = NOW(),
-            error_code = NULL, error_message = NULL
+            error_code = NULL, error_message = NULL, completed_at = NULL
         WHERE id = %s AND status IN ('pending', 'failed')
         RETURNING id
         """,
@@ -307,6 +307,7 @@ def complete_review(
     actual_vision_model: str | None,
     actual_evaluation_model: str,
     usage: dict[str, Any],
+    claimed_at,
 ) -> dict[str, Any]:
     return connection.execute(
         """
@@ -315,28 +316,28 @@ def complete_review(
             policy_action = %s, hint_level = %s, public_feedback = %s,
             actual_vision_model = %s, actual_evaluation_model = %s,
             usage = %s, completed_at = NOW()
-        WHERE id = %s
+        WHERE id = %s AND status = 'processing' AND started_at = %s
         RETURNING *
         """,
         (
             Jsonb(vision_result) if vision_result is not None else None,
             Jsonb(evaluation), action, hint_level, feedback,
-            actual_vision_model, actual_evaluation_model, Jsonb(usage), review_id,
+            actual_vision_model, actual_evaluation_model, Jsonb(usage), review_id, claimed_at,
         ),
     ).fetchone()
 
 
 def fail_review(
-    connection: Connection, review_id: UUID, error_code: str, error_message: str
+    connection: Connection, review_id: UUID, error_code: str, error_message: str, *, claimed_at
 ) -> None:
     connection.execute(
         """
         UPDATE tutor_reviews
         SET status = 'failed', error_code = %s, error_message = %s,
             completed_at = NOW()
-        WHERE id = %s
+        WHERE id = %s AND status = 'processing' AND started_at = %s
         """,
-        (error_code[:80], error_message[:500], review_id),
+        (error_code[:80], error_message[:500], review_id, claimed_at),
     )
 
 

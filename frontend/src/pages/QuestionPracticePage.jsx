@@ -194,7 +194,7 @@ function AnswerComposer({ part, value, attachments, saveState, saveMessage, onCh
   </div>
 }
 
-function QuestionPart({ part, answer, attachments, saveState, saveMessage, isActive, onAnswerChange, onSave, onUpload, onRemoveAttachment, onActivate, onTutorRequest }) {
+function QuestionPart({ part, answer, attachments, saveState, saveMessage, tutorBusy, tutorError, isActive, onAnswerChange, onSave, onUpload, onRemoveAttachment, onActivate, onTutorRequest }) {
   const [showScheme, setShowScheme] = useState(false)
   const [scheme, setScheme] = useState(null)
   const [schemeState, setSchemeState] = useState('idle')
@@ -222,11 +222,12 @@ function QuestionPart({ part, answer, attachments, saveState, saveMessage, isAct
     <AnswerComposer part={part} value={answer} attachments={attachments} saveState={saveState} saveMessage={saveMessage} onChange={onAnswerChange} onSave={onSave} onUpload={onUpload} onRemoveAttachment={onRemoveAttachment} />
     <div className="question-help-row">
       <div className="tutor-actions">
-        <button type="button" className="hint-button" onClick={() => onTutorRequest('hint', part, answer)}><Lightbulb size={17} /> Give me a hint</button>
-        <button type="button" className="check-ai-button" onClick={() => onTutorRequest('check', part, answer)}><Sparkles size={17} /> Check with AI</button>
+        <button type="button" className="hint-button" disabled={tutorBusy} onClick={() => onTutorRequest('hint', part, answer)}><Lightbulb size={17} /> Give me a hint</button>
+        <button type="button" className="check-ai-button" disabled={tutorBusy || saveState === 'uploading'} onClick={() => onTutorRequest('check', part, answer)}><Sparkles size={17} /> Check with AI</button>
       </div>
       <button type="button" className={`mark-scheme-toggle ${showScheme ? 'is-open' : ''}`} aria-expanded={showScheme} aria-controls={schemeId} onClick={toggleScheme}>{showScheme ? <EyeOff size={17} /> : <Eye size={17} />}{showScheme ? 'Hide mark scheme' : 'Mark scheme'}</button>
     </div>
+    {tutorError && <p className="response-load-warning" role="alert">{tutorError}</p>}
     {showScheme && <div className="mark-scheme-panel" id={schemeId}>
       {schemeState === 'loading' && <p>Loading mark scheme…</p>}
       {schemeState === 'error' && <p role="alert">The mark scheme could not be loaded.</p>}
@@ -244,14 +245,25 @@ const teachingMoveLabels = {
   redirect: 'Back to the question',
 }
 
+function TutorWaitMessage() {
+  const [slow, setSlow] = useState(false)
+  useEffect(() => {
+    const timer = setTimeout(() => setSlow(true), 10000)
+    return () => clearTimeout(timer)
+  }, [])
+  return <p className="tutor-availability-note" role="status">{slow
+    ? 'This is taking longer than usual. You can continue writing while the tutor finishes.'
+    : 'Your request is in progress. You can continue writing.'}</p>
+}
+
 function AiTutorPanel({ topic, question, activePart, reviews, reviewState, chatTurns, chatState, onRequest, onSendMessage, onRetryMessage }) {
   const [chatInput, setChatInput] = useState('')
   const messageEndRef = useRef(null)
   const isEmpty = Boolean(question.isPlaceholder)
   const partReviews = reviews.filter((review) => review.question_part_id === activePart.id)
   const partTurns = chatTurns.filter((turn) => turn.question_part_id === activePart.id)
-  const isReviewing = reviewState === 'reviewing'
-  const isChatting = chatState === 'sending'
+  const isReviewing = reviewState === 'reviewing' || partReviews.some((review) => ['pending', 'processing'].includes(review.status))
+  const isChatting = chatState === 'sending' || partTurns.some((turn) => ['pending', 'processing'].includes(turn.status))
   const isBusy = isReviewing || isChatting
   const timeline = [
     ...partReviews.map((review) => ({ kind: 'review', createdAt: review.created_at, value: review })),
@@ -295,17 +307,19 @@ function AiTutorPanel({ topic, question, activePart, reviews, reviewState, chatT
       </div> : <div className="tutor-messages">
         {timeline.map((item) => item.kind === 'review' ? <div className="tutor-message assistant" key={`review-${item.value.id}`}>
           <span>{item.value.status === 'completed' ? `Attempt ${item.value.attempt_number} · ${item.value.marks_awarded}/${item.value.marks_maximum} marks` : `Attempt ${item.value.attempt_number}`}</span>
-          <p>{item.value.feedback || item.value.error_message || 'This review did not complete.'}</p>
+          <p>{item.value.feedback || item.value.error_message || (['pending', 'processing'].includes(item.value.status) ? 'Your saved work is being reviewed.' : 'This review did not complete.')}</p>
         </div> : <div className="tutor-chat-turn" key={`chat-${item.value.client_message_id}`}>
           <div className="tutor-message student"><span>You</span><p>{item.value.learner_message}</p></div>
           {item.value.status === 'completed' && <div className="tutor-message assistant"><span>{teachingMoveLabels[item.value.teaching_move] || 'Tutor'}</span><p>{item.value.tutor_message}</p></div>}
-          {item.value.status === 'processing' && <div className="tutor-message assistant"><span>Thinking</span><p className="tutor-thinking"><LoaderCircle className="spin" size={15} /> Working out the best next question…</p></div>}
+          {['pending', 'processing'].includes(item.value.status) && <div className="tutor-message assistant"><span>Thinking</span><p className="tutor-thinking"><LoaderCircle className="spin" size={15} /> Working out the best next question…</p></div>}
           {item.value.status === 'failed' && <div className="tutor-message assistant is-error" role="alert"><span>Message saved</span><p>{item.value.error_message || 'I could not answer just now.'}</p><button type="button" className="tutor-retry-button" disabled={isBusy} onClick={() => onRetryMessage(activePart, item.value)}>Retry</button></div>}
         </div>)}
         {isReviewing && <div className="tutor-message assistant"><span>Reviewing</span><p className="tutor-thinking"><LoaderCircle className="spin" size={16} /> Reading your method and preparing the next hint…</p></div>}
         <div ref={messageEndRef} />
       </div>}
     </div>
+    {isBusy && <TutorWaitMessage />}
+    {timeline.some((item) => item.value.status === 'failed') && <p className="tutor-availability-note">You can keep learning while the tutor is unavailable. <Link to={`/topic/${topic.number}/${question.syllabus_codes?.[0] || `${topic.number}.1`}`}>Open lesson notes</Link>. Your saved work will be here when you return.</p>}
     <div className="tutor-quick-actions" aria-label="Tutor shortcuts">
       <button type="button" disabled={isEmpty || isBusy} onClick={() => onRequest('hint', activePart)}><Lightbulb size={15} /> Give a hint</button>
       <button type="button" disabled={isEmpty || isBusy} onClick={() => onRequest('check', activePart)}><CheckCircle2 size={15} /> Check my work</button>
@@ -396,6 +410,7 @@ export default function QuestionPracticePage() {
   const [activePartId, setActivePartId] = useState('')
   const [reviews, setReviews] = useState([])
   const [reviewStates, setReviewStates] = useState({})
+  const [reviewErrors, setReviewErrors] = useState({})
   const [chatTurns, setChatTurns] = useState([])
   const [chatStates, setChatStates] = useState({})
   const [tutorPanelWidth, setTutorPanelWidth] = useState(storedTutorWidth)
@@ -404,6 +419,8 @@ export default function QuestionPracticePage() {
   const answersRef = useRef({})
   const saveTimersRef = useRef(new Map())
   const saveVersionsRef = useRef(new Map())
+  const saveQueuesRef = useRef(new Map())
+  const busyPartsRef = useRef(new Set())
   const workspaceRef = useRef(null)
   const tutorPanelWidthRef = useRef(tutorPanelWidth)
   const preferredTutorPanelWidthRef = useRef(tutorPanelWidth)
@@ -443,6 +460,7 @@ export default function QuestionPracticePage() {
     setActivePartId('')
     setReviews([])
     setReviewStates({})
+    setReviewErrors({})
     setChatTurns([])
     setChatStates({})
     saveTimersRef.current.forEach((timer) => clearTimeout(timer))
@@ -460,10 +478,10 @@ export default function QuestionPracticePage() {
           restoredAttachments[response.question_part_id] = response.attachments
           restoredStates[response.question_part_id] = 'saved'
         })
-        answersRef.current = restoredAnswers
-        setAnswers(restoredAnswers)
+        answersRef.current = { ...restoredAnswers, ...answersRef.current }
+        setAnswers(answersRef.current)
         setAttachments(restoredAttachments)
-        setSaveStates(restoredStates)
+        setSaveStates((current) => ({ ...restoredStates, ...current }))
         setReviews(restoredReviews)
         setChatTurns(restoredChatTurns)
       })
@@ -476,6 +494,28 @@ export default function QuestionPracticePage() {
       saveTimersRef.current.clear()
     }
   }, [topicNumber])
+
+  const hasPendingTutorWork = reviews.some((item) => ['pending', 'processing'].includes(item.status))
+    || chatTurns.some((item) => ['pending', 'processing'].includes(item.status))
+    || Object.values(reviewStates).includes('reviewing')
+  useEffect(() => {
+    if (!hasPendingTutorWork || !topic) return undefined
+    let cancelled = false
+    let timer
+    const refresh = async () => {
+      const results = await Promise.allSettled([getTutorReviews(topicNumber), getTutorChatTurns(topicNumber)])
+      if (cancelled) return
+      if (results[0].status === 'fulfilled') setReviews(results[0].value)
+      if (results[1].status === 'fulfilled') {
+        const saved = results[1].value
+        setChatTurns((current) => [...saved, ...current.filter((turn) =>
+          !saved.some((item) => item.client_message_id === turn.client_message_id))])
+      }
+      timer = setTimeout(refresh, 2500)
+    }
+    timer = setTimeout(refresh, 2500)
+    return () => { cancelled = true; clearTimeout(timer) }
+  }, [hasPendingTutorWork, topicNumber])
 
   useLayoutEffect(() => {
     const keepWidthInBounds = () => {
@@ -602,7 +642,11 @@ export default function QuestionPracticePage() {
     setSaveStates((current) => ({ ...current, [partId]: 'saving' }))
     setSaveMessages((current) => ({ ...current, [partId]: '' }))
     try {
-      const response = await saveStudentResponse(partId, value, status)
+      // Serialize saves so a slow older draft cannot overwrite newer work.
+      const previous = saveQueuesRef.current.get(partId) || Promise.resolve()
+      const operation = previous.catch(() => {}).then(() => saveStudentResponse(partId, value, status))
+      saveQueuesRef.current.set(partId, operation)
+      const response = await operation
       setAttachments((current) => ({ ...current, [partId]: response.attachments }))
       if (saveVersionsRef.current.get(partId) === version) {
         setSaveStates((current) => ({ ...current, [partId]: 'saved' }))
@@ -682,7 +726,12 @@ export default function QuestionPracticePage() {
   }
 
   const askTutor = async (type, part) => {
-    if (!hasQuestions) return
+    if (!hasQuestions || busyPartsRef.current.has(part.id)) return
+    if (type === 'hint') {
+      return sendTutorMessage(part, 'Please give me one small hint for the next step, without revealing the answer.')
+    }
+    busyPartsRef.current.add(part.id)
+    setReviewErrors((current) => ({ ...current, [part.id]: '' }))
     setActivePartId(part.id)
     clearTimeout(saveTimersRef.current.get(part.id))
     saveTimersRef.current.delete(part.id)
@@ -701,14 +750,16 @@ export default function QuestionPracticePage() {
       setReviewStates((current) => ({ ...current, [part.id]: 'complete' }))
     } catch (error) {
       setReviewStates((current) => ({ ...current, [part.id]: 'error' }))
-      setSaveStates((current) => ({ ...current, [part.id]: 'error' }))
-      setSaveMessages((current) => ({ ...current, [part.id]: error.message }))
+      setReviewErrors((current) => ({ ...current, [part.id]: error.message }))
       getTutorReviews(topic.number).then(setReviews).catch(() => {})
+    } finally {
+      busyPartsRef.current.delete(part.id)
     }
   }
 
   const sendTutorMessage = async (part, message, clientMessageId = crypto.randomUUID()) => {
-    if (!hasQuestions) return
+    if (!hasQuestions || busyPartsRef.current.has(part.id)) return
+    busyPartsRef.current.add(part.id)
     setActivePartId(part.id)
     if (saveTimersRef.current.has(part.id)) {
       clearTimeout(saveTimersRef.current.get(part.id))
@@ -758,6 +809,8 @@ export default function QuestionPracticePage() {
           return [...restored, ...transient]
         })
       }).catch(() => {})
+    } finally {
+      busyPartsRef.current.delete(part.id)
     }
   }
 
@@ -789,7 +842,7 @@ export default function QuestionPracticePage() {
             <article className="exam-question" key={question.id}>
               <header className="exam-question-header"><div className="question-number">{String(question.number).padStart(2, '0')}</div><div><p>{question.syllabus_codes.map((code) => `Syllabus ${code}`).join(' - ')}</p><h2>{question.title}</h2></div><strong>{question.total_marks} marks</strong></header>
               <div className="question-stimulus">{question.prompt.map((block, index) => <QuestionBlock block={block} key={index} />)}</div>
-              <div className="question-parts">{question.parts.map((part) => <QuestionPart part={part} answer={answers[part.id] || ''} attachments={attachments[part.id] || []} saveState={saveStates[part.id] || 'idle'} saveMessage={saveMessages[part.id] || ''} isActive={part.id === activePart.id} onAnswerChange={(value) => changeAnswer(part.id, value)} onSave={() => saveNow(part)} onUpload={(files) => uploadImages(part, files)} onRemoveAttachment={(attachmentId) => deleteImage(part, attachmentId)} onActivate={() => setActivePartId(part.id)} onTutorRequest={askTutor} key={part.id} />)}</div>
+              <div className="question-parts">{question.parts.map((part) => <QuestionPart part={part} answer={answers[part.id] || ''} attachments={attachments[part.id] || []} saveState={saveStates[part.id] || 'idle'} saveMessage={saveMessages[part.id] || ''} tutorError={reviewErrors[part.id]} tutorBusy={reviewStates[part.id] === 'reviewing' || chatStates[part.id] === 'sending' || reviews.some((item) => item.question_part_id === part.id && ['pending', 'processing'].includes(item.status)) || chatTurns.some((item) => item.question_part_id === part.id && ['pending', 'processing'].includes(item.status))} isActive={part.id === activePart.id} onAnswerChange={(value) => changeAnswer(part.id, value)} onSave={() => saveNow(part)} onUpload={(files) => uploadImages(part, files)} onRemoveAttachment={(attachmentId) => deleteImage(part, attachmentId)} onActivate={() => setActivePartId(part.id)} onTutorRequest={askTutor} key={part.id} />)}</div>
             </article>
             <nav className="practice-pagination" aria-label="Question navigation"><button type="button" onClick={() => moveTo(questionIndex - 1)} disabled={questionIndex === 0}><ChevronLeft size={18} /> Previous question</button><span>{questionIndex + 1} of {questions.length}</span><button type="button" onClick={() => moveTo(questionIndex + 1)} disabled={questionIndex === questions.length - 1}>Next question <ChevronRight size={18} /></button></nav>
           </> : <EmptyQuestionCard topic={topic} loading={isLoading} error={loadError} />}
