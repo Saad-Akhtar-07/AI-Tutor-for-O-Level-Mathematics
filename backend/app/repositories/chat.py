@@ -137,7 +137,8 @@ def create_turn(
     ).fetchone()
     recent_turns = connection.execute(
         """
-        SELECT learner_message, tutor_message
+        SELECT learner_message, tutor_message, teaching_move, response_revision,
+               usage->'teaching' AS teaching
         FROM tutor_chat_turns
         WHERE learner_session_id = %s AND question_part_id = %s
           AND status = 'completed'
@@ -189,6 +190,10 @@ def create_turn(
             {
                 "learner": item["learner_message"],
                 "tutor": item["tutor_message"],
+                "teaching_move": item["teaching_move"],
+                "response_revision": item["response_revision"],
+                "support_level": (item.get("teaching") or {}).get("support_level", 0),
+                "target_concept": (item.get("teaching") or {}).get("target_concept", ""),
             }
             for item in reversed(recent_turns)
         ],

@@ -229,6 +229,10 @@ def test_probability_content_contract(monkeypatch) -> None:
             assert chat_calls[1]["snapshot"]["conversation"] == [{
                 "learner": "I do not know how to begin.",
                 "tutor": chatted.json()["tutor_message"],
+                "teaching_move": "ask_question",
+                "response_revision": None,
+                "support_level": 0,
+                "target_concept": "",
             }]
 
             chat_history = client.get(

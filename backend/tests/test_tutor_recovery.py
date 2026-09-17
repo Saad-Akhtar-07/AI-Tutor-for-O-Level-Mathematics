@@ -107,3 +107,47 @@ def test_simultaneous_duplicate_chat_does_not_duplicate_ai_call(learner, monkeyp
         assert first.result(timeout=5).status_code == 200
     assert len(calls) == 1
     assert len(client.get(f"/api/v1/learner-sessions/{session}/chat-turns").json()["turns"]) == 1
+
+
+def test_teaching_history_survives_refresh_and_reaches_assessment(learner, monkeypatch):
+    from backend.app.schemas.tutor import EvaluationResult, PrimaryError
+    from backend.app.services.tutor import TutorModelResult
+    client, session, part = learner
+    captured = []
+    def reminder(settings, snapshot, message):
+        captured.append(snapshot)
+        return TutorChatResult(SocraticReply(
+            message="Probability is favourable outcomes divided by all equally likely outcomes.",
+            teaching_move="formula_reminder", support_level=2, target_concept="probability",
+            should_revise_work=False, reveals_final_answer=False,
+        ), "test", {"teaching": {"support_level": 2, "target_concept": "probability"}})
+    monkeypatch.setattr("backend.app.routers.tutor.run_tutor_chat", reminder)
+    path = f"/api/v1/learner-sessions/{session}/question-parts/{part}/chat-turns"
+    assert client.post(path, json={"message": "Forgot the formula", "client_message_id": str(uuid4())}).status_code == 200
+    history = client.get(f"/api/v1/learner-sessions/{session}/chat-turns").json()["turns"]
+    assert history[0]["teaching_move"] == "formula_reminder"
+    assert client.post(path, json={"message": "Explain the denominator", "client_message_id": str(uuid4())}).status_code == 200
+    support = captured[-1]["conversation"][0]
+    assert support["support_level"] == 2 and support["target_concept"] == "probability"
+
+    review_snapshots = []
+    def assessment(settings, snapshot, images):
+        review_snapshots.append(snapshot)
+        return TutorModelResult(None, EvaluationResult(
+            assessment="incorrect", marks_awarded=0, readability="clear", observed_work="3/5",
+            criteria=[], primary_error=PrimaryError(type="conceptual_error", target_concept="sample space", description="Wrong denominator"),
+            positive_observation="", confidence=0.9,
+            teaching_feedback=SocraticReply(message="The total includes both favourable and unfavourable outcomes.",
+                teaching_move="explain_concept", support_level=2, target_concept="sample space",
+                should_revise_work=True, reveals_final_answer=False),
+        ), None, "test", {})
+    monkeypatch.setattr("backend.app.routers.tutor.run_tutor_models", assessment)
+    saved = client.put(f"/api/v1/learner-sessions/{session}/responses/{part}",
+        json={"typed_work": "3/5", "status": "ready_for_review"})
+    assert saved.status_code == 200
+    reviewed = client.post(f"/api/v1/learner-sessions/{session}/responses/{part}/reviews",
+        json={"expected_revision": saved.json()["revision"], "intent": "check"})
+    assert reviewed.status_code == 200
+    assert reviewed.json()["action"] == "explain_concept"
+    assert len(review_snapshots[0]["conversation"]) == 2
+    assert review_snapshots[0]["conversation"][0]["target_concept"] == "probability"

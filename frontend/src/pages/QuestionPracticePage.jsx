@@ -240,8 +240,11 @@ function QuestionPart({ part, answer, attachments, saveState, saveMessage, tutor
 }
 
 const teachingMoveLabels = {
-  ask_question: 'Socratic question',
+  ask_question: 'Think it through',
   small_hint: 'Small hint',
+  formula_reminder: 'Formula reminder',
+  worked_step: 'One worked step',
+  similar_example: 'Similar example',
   explain_concept: 'Concept explanation',
   check_understanding: 'Check your thinking',
   encourage: 'Tutor',
@@ -315,7 +318,7 @@ function AiTutorPanel({ topic, question, activePart, reviews, reviewState, chatT
   return <aside className="ai-tutor-panel" id="ai-tutor-panel" aria-label="AI tutor">
     <header className="ai-tutor-header">
       <div className="ai-tutor-avatar"><Bot size={21} /></div>
-      <div><div className="ai-tutor-title"><h2>AI Tutor</h2><span>Socratic tutor</span></div><p><i /> {isReviewing ? 'Reviewing your work' : isChatting ? 'Thinking with you' : 'Ready to help'}</p></div>
+      <div><div className="ai-tutor-title"><h2>AI Tutor</h2><span>Learning with you</span></div><p><i /> {isReviewing ? 'Reviewing your work' : isChatting ? 'Thinking with you' : 'Ready to help'}</p></div>
     </header>
     <VoicePreferences speech={speech} />
     <div className="ai-tutor-context"><span>Current focus</span><strong>{isEmpty ? `${topic.number} ${topic.title}` : `Question ${question.number} ${activePart.label}`}</strong><p>{isEmpty ? 'Questions are being prepared' : `${activePart.marks} ${activePart.marks === 1 ? 'mark' : 'marks'} · Guidance without giving the answer away`}</p></div>
@@ -323,7 +326,7 @@ function AiTutorPanel({ topic, question, activePart, reviews, reviewState, chatT
       {timeline.length === 0 && !isBusy ? <div className="tutor-welcome">
         <div><Sparkles size={22} /></div>
         <h3>{isEmpty ? `Your ${topic.title} tutor is ready.` : 'Try it—I’m here if you get stuck.'}</h3>
-        <p>{isEmpty ? 'When a reviewed question is loaded, I will follow its active part and help without taking over the solution.' : 'Ask about a step, request a hint, or share what is confusing. I will help you reason it out one step at a time.'}</p>
+        <p>{isEmpty ? 'When a reviewed question is loaded, I will follow its active part and help without taking over the solution.' : 'Ask for a formula reminder, a hint, or a short explanation. If you are still stuck, we can work through a similar example.'}</p>
       </div> : <div className="tutor-messages">
         {timeline.map((item) => item.kind === 'review' ? <div className="tutor-message assistant" key={`review-${item.value.id}`}>
           <span>{item.value.status === 'completed' ? `Attempt ${item.value.attempt_number} · ${item.value.marks_awarded}/${item.value.marks_maximum} marks` : `Attempt ${item.value.attempt_number}`}</span>
@@ -332,7 +335,7 @@ function AiTutorPanel({ topic, question, activePart, reviews, reviewState, chatT
         </div> : <div className="tutor-chat-turn" key={`chat-${item.value.client_message_id}`}>
           <div className="tutor-message student"><span>You</span><p>{item.value.learner_message}</p></div>
           {item.value.status === 'completed' && <div className="tutor-message assistant"><span>{teachingMoveLabels[item.value.teaching_move] || 'Tutor'}</span><p>{item.value.tutor_message}</p><ReadAloud speech={speech} type="chat" id={item.value.id} disabled={voiceInput.state !== 'idle'} /></div>}
-          {['pending', 'processing'].includes(item.value.status) && <div className="tutor-message assistant"><span>Thinking</span><p className="tutor-thinking"><LoaderCircle className="spin" size={15} /> Working out the best next question…</p></div>}
+          {['pending', 'processing'].includes(item.value.status) && <div className="tutor-message assistant"><span>Thinking</span><p className="tutor-thinking"><LoaderCircle className="spin" size={15} /> Preparing useful guidance…</p></div>}
           {item.value.status === 'failed' && <div className="tutor-message assistant is-error" role="alert"><span>Message saved</span><p>{item.value.error_message || 'I could not answer just now.'}</p><button type="button" className="tutor-retry-button" disabled={isBusy} onClick={() => onRetryMessage(activePart, item.value)}>Retry</button></div>}
         </div>)}
         {isReviewing && <div className="tutor-message assistant"><span>Reviewing</span><p className="tutor-thinking"><LoaderCircle className="spin" size={16} /> Reading your method and preparing the next hint…</p></div>}
@@ -344,6 +347,7 @@ function AiTutorPanel({ topic, question, activePart, reviews, reviewState, chatT
     {timeline.some((item) => item.value.status === 'failed') && <p className="tutor-availability-note">You can keep learning while the tutor is unavailable. <Link to={`/topic/${topic.number}/${question.syllabus_codes?.[0] || `${topic.number}.1`}`}>Open lesson notes</Link>. Your saved work will be here when you return.</p>}
     <div className="tutor-quick-actions" aria-label="Tutor shortcuts">
       <button type="button" disabled={isEmpty || isBusy} onClick={() => onRequest('hint', activePart)}><Lightbulb size={15} /> Give a hint</button>
+      <button type="button" disabled={isEmpty || isBusy} onClick={() => onSendMessage(activePart, 'Please explain the main concept behind this question briefly, without solving it for me.')}>Explain the concept</button>
       <button type="button" disabled={isEmpty || isBusy} onClick={() => onRequest('check', activePart)}><CheckCircle2 size={15} /> Check my work</button>
     </div>
     <VoiceInput input={voiceInput} disabled={isEmpty || isBusy} onUseDraft={(text) => {

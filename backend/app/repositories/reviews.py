@@ -146,7 +146,7 @@ def create_review(
 
     previous = connection.execute(
         """
-        SELECT evaluation, policy_action, hint_level
+        SELECT evaluation, policy_action, hint_level, public_feedback, response_revision
         FROM tutor_reviews
         WHERE learner_session_id = %s AND question_part_id = %s
           AND status = 'completed'
@@ -164,7 +164,16 @@ def create_review(
         """,
         (session_id, question_part_id),
     ).fetchone()["attempt_number"]
+    recent_turns = connection.execute(
+        """SELECT learner_message, tutor_message, teaching_move, response_revision,
+                  usage->'teaching' AS teaching
+           FROM tutor_chat_turns
+           WHERE learner_session_id = %s AND question_part_id = %s AND status = 'completed'
+           ORDER BY created_at DESC, id DESC LIMIT 4""",
+        (session_id, question_part_id),
+    ).fetchall()
     snapshot = {
+        "review_intent": intent,
         "question": {
             "id": response["question_id"],
             "number": response["question_number"],
@@ -188,6 +197,7 @@ def create_review(
         },
         "learner_work": {
             "typed_work": response["typed_work"],
+            "revision": response["revision"],
             "images": [
                 {
                     "position": position,
@@ -204,10 +214,21 @@ def create_review(
                 "evaluation": previous["evaluation"],
                 "policy_action": previous["policy_action"],
                 "hint_level": previous["hint_level"],
+                "feedback_already_shown": previous["public_feedback"],
+                "reviewed_response_revision": previous["response_revision"],
             }
             if previous
             else None
         ),
+        "conversation": [
+            {
+                "learner": item["learner_message"], "tutor": item["tutor_message"],
+                "teaching_move": item["teaching_move"], "response_revision": item["response_revision"],
+                "support_level": (item.get("teaching") or {}).get("support_level", 0),
+                "target_concept": (item.get("teaching") or {}).get("target_concept", ""),
+            }
+            for item in reversed(recent_turns)
+        ],
     }
 
     review_id = uuid4()

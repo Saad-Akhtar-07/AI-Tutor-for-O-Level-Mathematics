@@ -49,6 +49,22 @@ class PrimaryError(BaseModel):
     description: str = Field(max_length=1_000)
 
 
+class SocraticReply(BaseModel):
+    """Teaching-only reply; the name is retained for existing integrations."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    message: str = Field(min_length=1, max_length=2_000)
+    teaching_move: Literal[
+        "ask_question", "small_hint", "formula_reminder", "explain_concept",
+        "worked_step", "similar_example", "check_understanding", "encourage", "redirect",
+    ]
+    should_revise_work: bool
+    reveals_final_answer: Literal[False]
+    support_level: int = Field(default=0, ge=0, le=3)
+    target_concept: str = Field(default="", max_length=120)
+
+
 class EvaluationResult(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -59,9 +75,10 @@ class EvaluationResult(BaseModel):
     criteria: list[CriterionEvaluation] = Field(max_length=30)
     primary_error: PrimaryError | None
     positive_observation: str = Field(max_length=500)
-    guiding_question: str = Field(max_length=500)
-    next_step_hint: str = Field(max_length=1_000)
+    guiding_question: str = Field(default="", max_length=500)
+    next_step_hint: str = Field(default="", max_length=1_000)
     confidence: float = Field(ge=0, le=1)
+    teaching_feedback: SocraticReply | None = None
 
     @model_validator(mode="after")
     def keep_unassessable_results_safe(self):
@@ -104,22 +121,6 @@ class TutorChatRequest(BaseModel):
         if "\x00" in self.message:
             raise ValueError("message cannot contain null characters")
         return self
-
-
-class SocraticReply(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    message: str = Field(min_length=1, max_length=2_000)
-    teaching_move: Literal[
-        "ask_question",
-        "small_hint",
-        "explain_concept",
-        "check_understanding",
-        "encourage",
-        "redirect",
-    ]
-    should_revise_work: bool
-    reveals_final_answer: Literal[False]
 
 
 class TutorChatTurnResponse(BaseModel):

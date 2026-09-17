@@ -105,20 +105,36 @@ Every submitted revision creates one immutable `tutor_reviews` snapshot. If the
 attempt contains images, the backend first creates bounded 2048-pixel copies and
 asks a vision model to transcribe only visible work. A second, structured call
 evaluates the typed work plus transcription against the private mark scheme.
-Typed-only attempts skip the vision call. A deterministic policy then exposes a
-guiding question, targeted hint, or worked next step based on prior attempts.
+Typed-only attempts skip the vision call. The evaluation call composes adaptive
+teaching feedback using the error and recent support. Correct and unreadable
+work use deterministic confirmation/clarification. Older stored evaluations
+retain compatibility with the previous feedback fields.
 
 The normal question-bank response no longer includes answers. Mark schemes load
 only when the learner explicitly reveals one. Review endpoints return
 student-safe feedback and never return the internal snapshot or evaluation.
 
-### Socratic tutor chat
+### Adaptive tutor chat
 
 The question-side tutor also supports persisted, question-part-scoped chat. Each
 turn is grounded in the reviewed question, private marking criteria, the learner's
 current typed work, latest assessment, and up to 12 recent completed turns. The
 chat model is teaching-only: it cannot award marks or mutate review records, and
 its strict response schema forbids claiming that a reply reveals the final answer.
+The shared teaching policy selects a question, hint, formula reminder, explanation,
+worked step or similar example within that same model call. No classifier or
+second teaching call is added. Replies stay short with a 700-token chat ceiling.
+Strict wire schemas require all fields while local defaults preserve compatibility
+with previously saved results. Teaching moves, support levels and concepts are
+stored in existing turn/usage records; no database migration is needed.
+
+The tutor answers recall/explanation requests directly and changes approach after
+repeated confusion. Questions require useful evidence or a necessary clarification.
+It fades support when working demonstrates progress and may offer independent
+practice after substantial help. These are teaching rules, not measured mastery.
+Intermediate setup is allowed; demonstrations that would finish the active problem
+use different values. A local numeric-answer backstop replaces recognisable leaks
+with a useful check without retrying. It cannot detect every symbolic/text answer.
 Learner messages survive refresh, failed provider calls remain retryable, duplicate
 client message IDs are idempotent, and chat is limited to 30 turns per session per
 10 minutes.
@@ -150,3 +166,16 @@ Omit `--text-only` for photo transcription + assessment + chat. The script check
 an expected correct answer, prints timings and removes only its synthetic session.
 It uses real free-tier quota. Automated tests use fake providers and exercise
 outages, timeouts, schema failures, rate limits, persistence and concurrent retries.
+
+For synthetic adaptive-teaching checks with real providers (no database writes):
+
+```powershell
+.\backend\.venv\Scripts\python.exe -m backend.scripts.check_teaching --cases formula hint concept
+.\backend\.venv\Scripts\python.exe -m backend.scripts.check_teaching --cases frustration slip answer_request
+.\backend\.venv\Scripts\python.exe -m backend.scripts.check_teaching --cases conceptual_error calculation_error
+```
+
+Run batches separately to respect free-tier quotas. Add `--compare-baseline` to
+compare chat timing with the HEAD chat prompt before committing the change.
+Timings include network/provider delays; rate limits may trigger slower backups.
+Smoke scenarios do not establish learning gains or guarantee future latency.

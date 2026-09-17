@@ -1,8 +1,8 @@
 # AI Tutor for O Level Mathematics
 
 An AI-powered learning experience for Cambridge O Level Mathematics (Syllabus D
-4024) that evaluates a student's working, gives progressive guidance, and uses
-Socratic conversation instead of behaving like an answer-generating chatbot.
+4024) that evaluates a student's working and adapts questions, hints, formula
+reminders, short explanations, and examples to help students learn independently.
 
 - **Hackathon:** AI Hackathon Pakistan 2026
 - **Project ID:** P01403
@@ -21,9 +21,10 @@ content:
 `Study -> Attempt -> Evaluate -> Guide -> Retry -> Discuss`
 
 The evaluator checks the learner's exact submitted revision against private
-marking criteria. A separate tutoring policy then chooses an appropriate level
-of guidance, while the conversational tutor helps the learner reason forward
-without awarding marks or revealing the final answer.
+marking criteria. Chat and assessment feedback follow a shared teaching policy
+based on the request, work, current error, and previous support. The existing
+assessment call also composes feedback; chat chooses and explains in one call.
+Chat cannot award marks or change assessments.
 
 ## Working Probability MVP
 
@@ -41,9 +42,9 @@ The repository contains one complete vertical slice of the product:
   mark-scheme-grounded evaluation.
 - Immutable review attempts tied to the exact response revision that was
   assessed.
-- Deterministic progressive guidance that escalates from a guiding question to
-  a targeted hint or worked next step.
-- Persisted, question-scoped Socratic chat grounded in the question, learner
+- Adaptive feedback that gives specific corrections, reminders, explanations,
+  prompts, or demonstrations according to the learner's needs.
+- Persisted, question-scoped tutor chat grounded in the question, learner
   work, latest review, marking criteria, and recent conversation.
 - Explicit answer reveal: normal question responses do not expose private
   answers or marking points.
@@ -70,11 +71,20 @@ The structured evaluator assesses a frozen response snapshot. The tutoring
 policy decides the next pedagogical action, and the chat model explains or asks
 questions without changing the review or claiming to award marks.
 
-### Guidance becomes stronger across attempts
+### Help changes when students need it
 
-The hint level is selected deterministically from the learner's prior attempts.
-This makes the behaviour more predictable and auditable than asking a language
-model to control the entire tutoring process.
+A forgotten formula gets a direct reminder; a why-question gets an explanation.
+Questions are useful when the student has enough knowledge to reason forward.
+Repeated confusion calls for more concrete support, such as a similar example
+with different values. Recent teaching moves and concepts are saved with turns
+and supplied to subsequent chat and assessment calls. Changed work revisions
+are distinguished from previously assessed work.
+
+As the work shows understanding, the tutor reduces support and invites the
+student to apply it. Supported success is not treated as independent mastery.
+Final answers remain available through the explicit mark-scheme control. A local
+numeric answer check catches recognisable answer leaks without adding a model
+call; it is not a complete checker for symbolic or worded answers.
 
 ### Curriculum content is reviewed and structured
 
@@ -88,8 +98,8 @@ asked to invent a question or marking scheme.
 2. Select a question part and enter typed working or attach a solution image.
 3. Choose **Check with AI** to save and evaluate that exact revision.
 4. Read the awarded marks, feedback, and next hint.
-5. Revise the response and submit another attempt to receive stronger guidance.
-6. Ask the Socratic tutor a follow-up question about the active problem.
+5. Revise the response and submit another attempt to receive relevant feedback.
+6. Ask the tutor for a hint, formula reminder, explanation, or similar example.
 7. Refresh or revisit the question to see the saved work, reviews, and chat.
 
 ## Architecture
