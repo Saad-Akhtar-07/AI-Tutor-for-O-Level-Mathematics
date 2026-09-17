@@ -33,6 +33,9 @@ import {
 } from '../api/submissions.js'
 import { syllabus } from '../data/syllabus.js'
 import NotFound from './NotFound.jsx'
+import useVoiceInput from '../hooks/useVoiceInput.js'
+import useTutorSpeech from '../hooks/useTutorSpeech.js'
+import { VoiceInput, VoicePreferences, VoiceStatus, ReadAloud } from '../components/TutorVoice.jsx'
 
 const mathsTools = [
   { id: 'power', label: 'x²', name: 'Add a power' },
@@ -258,6 +261,9 @@ function TutorWaitMessage() {
 
 function AiTutorPanel({ topic, question, activePart, reviews, reviewState, chatTurns, chatState, onRequest, onSendMessage, onRetryMessage }) {
   const [chatInput, setChatInput] = useState('')
+  const speech = useTutorSpeech(activePart.id)
+  const voiceInput = useVoiceInput(activePart.id, speech.stop)
+  const awaitingVoice = useRef(new Set())
   const messageEndRef = useRef(null)
   const isEmpty = Boolean(question.isPlaceholder)
   const partReviews = reviews.filter((review) => review.question_part_id === activePart.id)
@@ -272,7 +278,18 @@ function AiTutorPanel({ topic, question, activePart, reviews, reviewState, chatT
 
   useEffect(() => {
     setChatInput('')
+    awaitingVoice.current.clear()
   }, [activePart.id])
+
+  useEffect(() => {
+    for (const item of timeline) {
+      const key = `${item.kind}:${item.value.client_message_id || item.value.id}`
+      if (['pending', 'processing'].includes(item.value.status)) awaitingVoice.current.add(key)
+      else if (awaitingVoice.current.delete(key) && item.value.status === 'completed' && speech.autoRead && voiceInput.state === 'idle') {
+        speech.play(item.kind, item.value.id)
+      }
+    }
+  }, [chatTurns, reviews, speech.autoRead, voiceInput.state])
 
   useEffect(() => {
     messageEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
@@ -282,6 +299,8 @@ function AiTutorPanel({ topic, question, activePart, reviews, reviewState, chatT
     event.preventDefault()
     const message = chatInput.trim()
     if (!message || isBusy || isEmpty) return
+    voiceInput.cancel()
+    speech.stop()
     setChatInput('')
     onSendMessage(activePart, message)
   }
@@ -298,6 +317,7 @@ function AiTutorPanel({ topic, question, activePart, reviews, reviewState, chatT
       <div className="ai-tutor-avatar"><Bot size={21} /></div>
       <div><div className="ai-tutor-title"><h2>AI Tutor</h2><span>Socratic tutor</span></div><p><i /> {isReviewing ? 'Reviewing your work' : isChatting ? 'Thinking with you' : 'Ready to help'}</p></div>
     </header>
+    <VoicePreferences speech={speech} />
     <div className="ai-tutor-context"><span>Current focus</span><strong>{isEmpty ? `${topic.number} ${topic.title}` : `Question ${question.number} ${activePart.label}`}</strong><p>{isEmpty ? 'Questions are being prepared' : `${activePart.marks} ${activePart.marks === 1 ? 'mark' : 'marks'} · Guidance without giving the answer away`}</p></div>
     <div className="ai-tutor-conversation" aria-live="polite" aria-busy={isBusy}>
       {timeline.length === 0 && !isBusy ? <div className="tutor-welcome">
@@ -308,13 +328,15 @@ function AiTutorPanel({ topic, question, activePart, reviews, reviewState, chatT
         {timeline.map((item) => item.kind === 'review' ? <div className="tutor-message assistant" key={`review-${item.value.id}`}>
           <span>{item.value.status === 'completed' ? `Attempt ${item.value.attempt_number} · ${item.value.marks_awarded}/${item.value.marks_maximum} marks` : `Attempt ${item.value.attempt_number}`}</span>
           <p>{item.value.feedback || item.value.error_message || (['pending', 'processing'].includes(item.value.status) ? 'Your saved work is being reviewed.' : 'This review did not complete.')}</p>
+          {item.value.status === 'completed' && <ReadAloud speech={speech} type="review" id={item.value.id} disabled={voiceInput.state !== 'idle'} />}
         </div> : <div className="tutor-chat-turn" key={`chat-${item.value.client_message_id}`}>
           <div className="tutor-message student"><span>You</span><p>{item.value.learner_message}</p></div>
-          {item.value.status === 'completed' && <div className="tutor-message assistant"><span>{teachingMoveLabels[item.value.teaching_move] || 'Tutor'}</span><p>{item.value.tutor_message}</p></div>}
+          {item.value.status === 'completed' && <div className="tutor-message assistant"><span>{teachingMoveLabels[item.value.teaching_move] || 'Tutor'}</span><p>{item.value.tutor_message}</p><ReadAloud speech={speech} type="chat" id={item.value.id} disabled={voiceInput.state !== 'idle'} /></div>}
           {['pending', 'processing'].includes(item.value.status) && <div className="tutor-message assistant"><span>Thinking</span><p className="tutor-thinking"><LoaderCircle className="spin" size={15} /> Working out the best next question…</p></div>}
           {item.value.status === 'failed' && <div className="tutor-message assistant is-error" role="alert"><span>Message saved</span><p>{item.value.error_message || 'I could not answer just now.'}</p><button type="button" className="tutor-retry-button" disabled={isBusy} onClick={() => onRetryMessage(activePart, item.value)}>Retry</button></div>}
         </div>)}
         {isReviewing && <div className="tutor-message assistant"><span>Reviewing</span><p className="tutor-thinking"><LoaderCircle className="spin" size={16} /> Reading your method and preparing the next hint…</p></div>}
+        <VoiceStatus speech={speech} />
         <div ref={messageEndRef} />
       </div>}
     </div>
@@ -324,6 +346,15 @@ function AiTutorPanel({ topic, question, activePart, reviews, reviewState, chatT
       <button type="button" disabled={isEmpty || isBusy} onClick={() => onRequest('hint', activePart)}><Lightbulb size={15} /> Give a hint</button>
       <button type="button" disabled={isEmpty || isBusy} onClick={() => onRequest('check', activePart)}><CheckCircle2 size={15} /> Check my work</button>
     </div>
+    <VoiceInput input={voiceInput} disabled={isEmpty || isBusy} onUseDraft={(text) => {
+      const combined = [chatInput.trim(), text.trim()].filter(Boolean).join('\n')
+      if (combined.length > 1000) {
+        voiceInput.setDraft({ ...voiceInput.draft, warning: 'The combined message is over 1,000 characters. Shorten the transcript or existing message first.' })
+        return
+      }
+      setChatInput(combined)
+      voiceInput.cancel()
+    }} />
     <form className="tutor-chat-form" onSubmit={submitMessage}>
       <label className="sr-only" htmlFor={`tutor-message-${activePart.id}`}>Ask the AI tutor about this question</label>
       <textarea

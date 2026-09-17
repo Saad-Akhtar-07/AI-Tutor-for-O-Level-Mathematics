@@ -8,6 +8,7 @@
   },
   "scripts": {
     "test": "node --test src/api/*.test.js",
+    "test:voice": "vitest run src/voice-tests",
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview"
@@ -22,8 +23,12 @@
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.3.3",
+    "@testing-library/dom": "^10.4.1",
+    "@testing-library/react": "^16.3.2",
     "@vitejs/plugin-react": "^6.1.0",
+    "jsdom": "^26.1.0",
     "tailwindcss": "^4.3.3",
-    "vite": "^8.2.2"
+    "vite": "^8.2.2",
+    "vitest": "^4.1.11"
   }
 }

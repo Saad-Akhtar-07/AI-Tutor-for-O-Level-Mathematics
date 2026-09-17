@@ -30,6 +30,7 @@ Thumbs.db
 
 # ── Node / frontend ────────────────────────────────────────────────────────────
 node_modules/
+voice-worker/.models/
 frontend/dist/
 frontend/.vite/
 

@@ -47,10 +47,17 @@ The repository contains one complete vertical slice of the product:
   work, latest review, marking criteria, and recent conversation.
 - Explicit answer reveal: normal question responses do not expose private
   answers or marking points.
+- Optional voice questions with editable transcripts, plus local natural
+  read-aloud of saved tutor replies and review feedback. Includes maths
+  pronunciation, playback speed, and device-voice recovery.
 - Dark mode, responsive navigation, accessible typography, and clear loading
   and failure states.
 
 ## What makes it different
+
+Voice is installed in this workspace. Restart the backend normally to start the
+local speech worker. For setup on another machine, controls, tests, and measured
+performance, see [the voice guide](voice-worker/README.md).
 
 ### It evaluates the working, not only the final answer
 

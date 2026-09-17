@@ -65,7 +65,7 @@ async function createSession() {
   return session.id
 }
 
-async function getSessionId() {
+export async function getSessionId() {
   const existing = storedSessionId()
   if (existing) return existing
   if (!sessionPromise) sessionPromise = createSession().finally(() => { sessionPromise = null })

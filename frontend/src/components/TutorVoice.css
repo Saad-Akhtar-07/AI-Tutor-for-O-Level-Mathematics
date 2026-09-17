@@ -1,0 +1,27 @@
+.tutor-voice-preferences,.tutor-voice-input{padding:10px 14px;border-top:1px solid var(--border-subtle);font-size:12px;color:var(--text-secondary)}
+.tutor-voice-preferences{display:flex;flex-wrap:wrap;align-items:center;gap:8px;background:var(--surface-subtle)}
+.tutor-voice-preferences label{display:flex;align-items:center;gap:5px}
+.tutor-voice-preferences select{max-width:125px;border:1px solid var(--border);border-radius:6px;padding:4px;background:var(--surface);color:var(--text-primary);font:inherit}
+.voice-input-actions,.voice-reply-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.tutor-voice-preferences button,.tutor-voice-input button,.voice-reply-actions button{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--border);border-radius:7px;background:var(--surface);color:var(--accent);padding:6px 9px;font:inherit;cursor:pointer}
+.tutor-voice-input button:disabled,.voice-reply-actions button:disabled{opacity:.5;cursor:not-allowed}
+.voice-reply-actions{margin-top:8px;font-size:11px}
+.voice-reply-actions.is-reading{border-left:3px solid var(--accent);padding-left:8px}
+.tutor-message.assistant:has(.voice-reply-actions.is-reading){background:var(--accent-soft);box-shadow:inset 3px 0 var(--accent)}
+.voice-status{color:var(--accent)}
+.voice-notice{width:100%;margin:6px 0 0;line-height:1.5;color:var(--update-text)}
+.voice-spoken{width:100%;margin:2px 0;padding:8px;border-left:3px solid var(--accent);background:var(--accent-soft);line-height:1.6;max-height:120px;overflow:auto}
+.voice-spoken span{display:block;font-size:10px;font-weight:700;text-transform:uppercase;color:var(--accent)}
+.tutor-voice-input small{display:block;margin-top:7px;font-size:10px;line-height:1.5;color:var(--text-secondary)}
+.tutor-voice-input .is-recording{background:#fff0f0;color:#a42323;border-color:#e4a6a6}
+.voice-draft{margin-top:10px;padding:10px;background:var(--surface-subtle);border-radius:8px}
+.voice-draft label{display:block;font-weight:600;margin-bottom:6px}
+.voice-draft textarea{box-sizing:border-box;width:100%;resize:vertical;padding:8px;border:1px solid var(--border);border-radius:6px;font:inherit;background:var(--surface)}
+.voice-draft p{font-size:11px;line-height:1.5}
+.tutor-voice-input button:focus-visible,.voice-reply-actions button:focus-visible,.tutor-voice-preferences :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.ai-tutor-panel:has(.tutor-voice-input){overflow-y:auto}
+.ai-tutor-panel:has(.tutor-voice-input)>:not(.ai-tutor-conversation){flex-shrink:0}
+.ai-tutor-panel:has(.tutor-voice-input) .ai-tutor-conversation{min-height:150px}
+.voice-playback-status{font-size:12px;line-height:1.5}
+@media(max-width:600px){.voice-input-actions button,.voice-reply-actions button{min-height:40px}.voice-draft textarea{font-size:16px}}

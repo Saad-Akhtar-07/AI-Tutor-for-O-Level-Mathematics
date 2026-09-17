@@ -6,6 +6,8 @@ from .database import database_lifespan
 from .routers.content import router as content_router
 from .routers.submissions import router as submissions_router
 from .routers.tutor import router as tutor_router
+from .routers.voice import router as voice_router
+from .voice_limits import VoiceBodyLimit
 
 
 def create_app() -> FastAPI:
@@ -16,6 +18,7 @@ def create_app() -> FastAPI:
         description="Database-backed learning content API for the Probability MVP.",
         lifespan=database_lifespan,
     )
+    application.add_middleware(VoiceBodyLimit)
     application.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origins,
@@ -26,6 +29,7 @@ def create_app() -> FastAPI:
     application.include_router(content_router)
     application.include_router(submissions_router)
     application.include_router(tutor_router)
+    application.include_router(voice_router)
     return application
 
 

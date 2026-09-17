@@ -24,9 +24,12 @@ pool = ConnectionPool(
 async def database_lifespan(_: FastAPI):
     """Open the shared pool at application startup and close it on shutdown."""
     pool.open(wait=True)
+    from .services.speech import start_worker, stop_worker
+    start_worker()
     try:
         yield
     finally:
+        stop_worker()
         pool.close()
 
 
