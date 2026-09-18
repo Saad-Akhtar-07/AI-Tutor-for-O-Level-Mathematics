@@ -6,7 +6,7 @@ export default function useTutorSpeech(partId) {
   const [status, setStatus] = useState('')
   const [spoken, setSpoken] = useState('')
   const [notice, setNotice] = useState('')
-  const [voice, setVoice] = useState('af_heart')
+  const [voice, setVoice] = useState('device')
   const [speed, setSpeed] = useState(1)
   const [autoRead, setAutoRead] = useState(false)
   const run = useRef(0)
@@ -68,7 +68,7 @@ export default function useTutorSpeech(partId) {
     const version = run.current
     controller.current = new AbortController()
     const signal = controller.current.signal
-    const source = { source_type: sourceType, source_id: sourceId, voice }
+    const source = { source_type: sourceType, source_id: sourceId, voice: voice === 'device' ? 'af_heart' : voice }
     setActive(`${sourceType}:${sourceId}`)
     setStatus('Preparing voice…')
     setNotice('')
@@ -76,7 +76,7 @@ export default function useTutorSpeech(partId) {
       const prepared = await voiceRequest('prepare', source, signal)
       if (version !== run.current) return
       setNotice(prepared.warning || '')
-      let useDevice = device || prepared.device_only
+      let useDevice = device || voice === 'device' || prepared.device_only
       // At most one clip ahead: hide generation behind playback without
       // filling a server queue with speech the learner may cancel.
       const fetchClip = index => voiceRequest('speech', { ...source, segment: index }, signal, true)

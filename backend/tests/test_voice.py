@@ -156,3 +156,19 @@ def test_dead_worker_device_fallback_never_guesses_maths(monkeypatch):
     assert result['device_only']
     assert result['warning']
     assert result['segments'] == ['Please check the mathematical expression shown in the text.', 'Think about the denominator.']
+
+
+@pytest.mark.parametrize('text,expected', [
+    ('1/(x+2).\n\n+\n2/(y+3).\n.\n3/(z+4).', ['math']),
+    ('1/(x+2). 2/(y+3). Think about the denominator. 3/(z+4). 4/(a+5).',
+     ['math', 'Think about the denominator.', 'math']),
+    ('P(first A and second B)=P(first A)×P(second B | first A).\nHere A and B are both salt-flavoured packets.',
+     ['math', 'Here A and B are both salt-flavoured packets.']),
+])
+def test_dead_worker_groups_maths_reminders_until_prose_resumes(monkeypatch, text, expected):
+    monkeypatch.setattr(speech, 'worker', Mock(side_effect=HTTPException(503, 'Unavailable')))
+    result = speech.prepare(text)
+    reminder = 'Please check the mathematical expression shown in the text.'
+    assert result['segments'] == [reminder if segment == 'math' else segment for segment in expected]
+    assert result['warning']
+    assert result['device_only']

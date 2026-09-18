@@ -13,12 +13,14 @@ import {
   Save,
   Send,
   Sparkles,
+  SlidersHorizontal,
   Trash2,
+  X,
 } from 'lucide-react'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import InlineContent from '../components/notes/InlineContent.jsx'
-import SyllabusSidebar from '../components/SyllabusSidebar.jsx'
+import ReaderShell from '../components/ReaderShell.jsx'
 import { getQuestionBank, getQuestionPartSolution } from '../api/content.js'
 import {
   attachmentContentUrl,
@@ -36,6 +38,7 @@ import NotFound from './NotFound.jsx'
 import useVoiceInput from '../hooks/useVoiceInput.js'
 import useTutorSpeech from '../hooks/useTutorSpeech.js'
 import { VoiceInput, VoicePreferences, VoiceStatus, ReadAloud } from '../components/TutorVoice.jsx'
+import './PracticeWorkspace.css'
 
 const mathsTools = [
   { id: 'power', label: 'x²', name: 'Add a power' },
@@ -47,7 +50,7 @@ const mathsTools = [
 ]
 
 const TUTOR_WIDTH_STORAGE_KEY = 'ai-tutor-panel-width-v1'
-const DEFAULT_TUTOR_WIDTH = 380
+const DEFAULT_TUTOR_WIDTH = 420
 const MIN_TUTOR_WIDTH = 310
 const MAX_TUTOR_WIDTH = 650
 const MIN_QUESTION_WIDTH = 420
@@ -264,6 +267,9 @@ function TutorWaitMessage() {
 
 function AiTutorPanel({ topic, question, activePart, reviews, reviewState, chatTurns, chatState, onRequest, onSendMessage, onRetryMessage }) {
   const [chatInput, setChatInput] = useState('')
+  const [showVoiceSettings, setShowVoiceSettings] = useState(false)
+  const settingsRef = useRef(null)
+  const settingsButtonRef = useRef(null)
   const speech = useTutorSpeech(activePart.id)
   const voiceInput = useVoiceInput(activePart.id, speech.stop)
   const awaitingVoice = useRef(new Set())
@@ -278,6 +284,23 @@ function AiTutorPanel({ topic, question, activePart, reviews, reviewState, chatT
     ...partReviews.map((review) => ({ kind: 'review', createdAt: review.created_at, value: review })),
     ...partTurns.map((turn) => ({ kind: 'chat', createdAt: turn.created_at, value: turn })),
   ].sort((left, right) => new Date(left.createdAt) - new Date(right.createdAt))
+
+  useEffect(() => {
+    if (!showVoiceSettings) return undefined
+    const dismiss = event => {
+      if (event.type === 'keydown') {
+        if (event.key !== 'Escape') return
+        settingsButtonRef.current?.focus()
+      } else if (settingsRef.current?.contains(event.target) || settingsButtonRef.current?.contains(event.target)) return
+      setShowVoiceSettings(false)
+    }
+    document.addEventListener('pointerdown', dismiss)
+    document.addEventListener('keydown', dismiss)
+    return () => {
+      document.removeEventListener('pointerdown', dismiss)
+      document.removeEventListener('keydown', dismiss)
+    }
+  }, [showVoiceSettings])
 
   useEffect(() => {
     setChatInput('')
@@ -318,10 +341,16 @@ function AiTutorPanel({ topic, question, activePart, reviews, reviewState, chatT
   return <aside className="ai-tutor-panel" id="ai-tutor-panel" aria-label="AI tutor">
     <header className="ai-tutor-header">
       <div className="ai-tutor-avatar"><Bot size={21} /></div>
-      <div><div className="ai-tutor-title"><h2>AI Tutor</h2><span>Learning with you</span></div><p><i /> {isReviewing ? 'Reviewing your work' : isChatting ? 'Thinking with you' : 'Ready to help'}</p></div>
+      <div><div className="ai-tutor-title"><h2>AI Tutor</h2></div><p><i /> {isReviewing ? 'Reviewing your work' : isChatting ? 'Thinking with you' : 'Ready to help'}</p></div>
+      <div className="tutor-header-actions">
+        <button ref={settingsButtonRef} type="button" className="workspace-icon-button" aria-label="Voice settings" title="Voice settings" aria-expanded={showVoiceSettings} aria-controls="tutor-voice-settings" onClick={() => setShowVoiceSettings(value => !value)}><SlidersHorizontal size={17} /></button>
+      </div>
     </header>
-    <VoicePreferences speech={speech} />
-    <div className="ai-tutor-context"><span>Current focus</span><strong>{isEmpty ? `${topic.number} ${topic.title}` : `Question ${question.number} ${activePart.label}`}</strong><p>{isEmpty ? 'Questions are being prepared' : `${activePart.marks} ${activePart.marks === 1 ? 'mark' : 'marks'} · Guidance without giving the answer away`}</p></div>
+    {showVoiceSettings && <section ref={settingsRef} className="tutor-settings-popover" id="tutor-voice-settings" aria-label="Voice settings">
+      <div className="tutor-settings-heading"><strong>Voice settings</strong><button type="button" className="workspace-icon-button" aria-label="Close voice settings" onClick={() => { setShowVoiceSettings(false); settingsButtonRef.current?.focus() }}><X size={16} /></button></div>
+      <VoicePreferences speech={speech} />
+    </section>}
+    <div className="ai-tutor-context"><strong>{isEmpty ? `${topic.number} ${topic.title}` : `Question ${question.number} ${activePart.label}`}</strong><p>{isEmpty ? 'Questions coming soon' : `${activePart.marks} ${activePart.marks === 1 ? 'mark' : 'marks'}`}</p></div>
     <div className="ai-tutor-conversation" aria-live="polite" aria-busy={isBusy}>
       {timeline.length === 0 && !isBusy ? <div className="tutor-welcome">
         <div><Sparkles size={22} /></div>
@@ -345,10 +374,11 @@ function AiTutorPanel({ topic, question, activePart, reviews, reviewState, chatT
     </div>
     {isBusy && <TutorWaitMessage />}
     {timeline.some((item) => item.value.status === 'failed') && <p className="tutor-availability-note">You can keep learning while the tutor is unavailable. <Link to={`/topic/${topic.number}/${question.syllabus_codes?.[0] || `${topic.number}.1`}`}>Open lesson notes</Link>. Your saved work will be here when you return.</p>}
+    <div className="tutor-composer">
     <div className="tutor-quick-actions" aria-label="Tutor shortcuts">
-      <button type="button" disabled={isEmpty || isBusy} onClick={() => onRequest('hint', activePart)}><Lightbulb size={15} /> Give a hint</button>
-      <button type="button" disabled={isEmpty || isBusy} onClick={() => onSendMessage(activePart, 'Please explain the main concept behind this question briefly, without solving it for me.')}>Explain the concept</button>
-      <button type="button" disabled={isEmpty || isBusy} onClick={() => onRequest('check', activePart)}><CheckCircle2 size={15} /> Check my work</button>
+      <button type="button" disabled={isEmpty || isBusy} onClick={() => onRequest('hint', activePart)}><Lightbulb size={15} /> Hint</button>
+      <button type="button" disabled={isEmpty || isBusy} onClick={() => onSendMessage(activePart, 'Please explain the main concept behind this question briefly, without solving it for me.')}><BookOpenCheck size={15} /> Explain</button>
+      <button type="button" disabled={isEmpty || isBusy} onClick={() => onRequest('check', activePart)}><CheckCircle2 size={15} /> Check work</button>
     </div>
     <VoiceInput input={voiceInput} disabled={isEmpty || isBusy} onUseDraft={(text) => {
       const combined = [chatInput.trim(), text.trim()].filter(Boolean).join('\n')
@@ -374,6 +404,7 @@ function AiTutorPanel({ topic, question, activePart, reviews, reviewState, chatT
       <button type="submit" aria-label="Send message" title="Send message" disabled={isEmpty || isBusy || !chatInput.trim()}><Send size={18} /></button>
       <small>Enter to send · Shift+Enter for a new line</small>
     </form>
+    </div>
   </aside>
 }
 
@@ -555,7 +586,7 @@ export default function QuestionPracticePage() {
   useLayoutEffect(() => {
     const keepWidthInBounds = () => {
       const workspace = workspaceRef.current
-      if (!workspace || window.matchMedia('(max-width: 1279px)').matches) return
+      if (!workspace || workspace.getBoundingClientRect().width < 800) return
       const bounds = tutorWidthBounds(workspace)
       const nextWidth = clampTutorWidth(workspace, preferredTutorPanelWidthRef.current)
       setTutorPanelMaxWidth(bounds.maximum)
@@ -564,8 +595,11 @@ export default function QuestionPracticePage() {
       workspace.style.setProperty('--tutor-panel-width', `${nextWidth}px`)
     }
     keepWidthInBounds()
+    const observer = new ResizeObserver(keepWidthInBounds)
+    if (workspaceRef.current) observer.observe(workspaceRef.current)
     window.addEventListener('resize', keepWidthInBounds)
     return () => {
+      observer.disconnect()
       window.removeEventListener('resize', keepWidthInBounds)
       if (resizeFrameRef.current !== null) cancelAnimationFrame(resizeFrameRef.current)
       document.documentElement.classList.remove('is-resizing-tutor')
@@ -857,10 +891,11 @@ export default function QuestionPracticePage() {
         ? 'Could not reach the content library'
         : 'Question workspace ready · Reviewed questions have not been added yet'
 
-  return <main className="reader-shell" id="main-content" tabIndex="-1">
-    <SyllabusSidebar topic={topic} activeCode="practice" />
+  return <ReaderShell topic={topic} activeCode="practice" className="practice-shell">
     <div className="reader-main practice-reader-main">
+      <div className="practice-topbar">
       <nav className="breadcrumbs" aria-label="Breadcrumb"><ol><li><Link to="/">Syllabus</Link></li><li><ChevronRight size={14} /></li><li><Link to={`/topic/${topic.number}`}>{topic.number} {topic.title}</Link></li><li><ChevronRight size={14} /></li><li><span aria-current="page">Practice questions</span></li></ol></nav>
+      </div>
       <header className="practice-heading"><div><p>TOPIC {topic.number} - {topic.title.toUpperCase()}</p><h1>Practice with your AI tutor</h1><span>{summary}</span></div><BookOpenCheck size={38} /></header>
       <nav className={`question-picker ${hasQuestions ? '' : 'is-empty'}`} aria-label="Choose a question">
         <span>Question</span>
@@ -904,5 +939,5 @@ export default function QuestionPracticePage() {
         <AiTutorPanel topic={topic} question={question} activePart={activePart} reviews={reviews} reviewState={reviewStates[activePart.id] || 'idle'} chatTurns={chatTurns} chatState={chatStates[activePart.id] || 'idle'} onRequest={askTutor} onSendMessage={sendTutorMessage} onRetryMessage={(part, turn) => sendTutorMessage(part, turn.learner_message, turn.client_message_id)} />
       </div>
     </div>
-  </main>
+  </ReaderShell>
 }

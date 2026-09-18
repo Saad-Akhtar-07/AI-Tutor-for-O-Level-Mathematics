@@ -20,8 +20,6 @@
 .voice-draft p{font-size:11px;line-height:1.5}
 .tutor-voice-input button:focus-visible,.voice-reply-actions button:focus-visible,.tutor-voice-preferences :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 
-.ai-tutor-panel:has(.tutor-voice-input){overflow-y:auto}
 .ai-tutor-panel:has(.tutor-voice-input)>:not(.ai-tutor-conversation){flex-shrink:0}
-.ai-tutor-panel:has(.tutor-voice-input) .ai-tutor-conversation{min-height:150px}
 .voice-playback-status{font-size:12px;line-height:1.5}
 @media(max-width:600px){.voice-input-actions button,.voice-reply-actions button{min-height:40px}.voice-draft textarea{font-size:16px}}

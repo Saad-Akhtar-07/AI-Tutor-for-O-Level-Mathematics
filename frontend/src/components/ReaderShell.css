@@ -1,0 +1,29 @@
+.syllabus-sidebar nav a .sidebar-link-title { color: inherit; font: inherit; line-height: inherit; }
+
+@media (min-width: 901px) {
+  .collapsible-reader-shell.is-sidebar-collapsed { grid-template-columns: 64px minmax(0, 1fr); }
+  .reader-sidebar {
+    position: sticky; top: var(--header-height); align-self: start;
+    height: calc(100dvh - var(--header-height)); min-width: 0;
+  }
+  .reader-sidebar .syllabus-sidebar { position: static; height: 100%; }
+  .sidebar-edge-toggle {
+    position: absolute; top: 24px; right: -16px; z-index: 25;
+    width: 32px; height: 32px; padding: 0; border: 1px solid var(--border);
+    border-radius: 9px; color: var(--text-secondary); background: var(--surface);
+    display: grid; place-items: center; cursor: pointer;
+    box-shadow: 0 3px 10px var(--overlay-shadow);
+  }
+  .sidebar-edge-toggle:hover { color: var(--accent); border-color: var(--accent); background: var(--accent-soft); }
+  .sidebar-edge-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+  .is-sidebar-collapsed .reader-sidebar .syllabus-sidebar { padding: 32px 7px 40px; }
+  .is-sidebar-collapsed .sidebar-heading { padding: 0 0 18px; text-align: center; }
+  .is-sidebar-collapsed .sidebar-heading > a, .is-sidebar-collapsed .sidebar-link-title { display: none; }
+  .is-sidebar-collapsed .sidebar-heading > span { margin-bottom: 0; }
+  .is-sidebar-collapsed .syllabus-sidebar nav a { grid-template-columns: minmax(0, 1fr); align-items: center; justify-items: center; padding: 10px 2px; }
+  .is-sidebar-collapsed .syllabus-sidebar nav a span { font-size: 12px; }
+}
+@media (max-width: 900px) {
+  .reader-sidebar { display: contents; }
+  .sidebar-edge-toggle { display: none; }
+}

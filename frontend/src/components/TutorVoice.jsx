@@ -4,7 +4,7 @@ import './TutorVoice.css'
 export function VoicePreferences({ speech }) {
   return <div className="tutor-voice-preferences">
     <label><input type="checkbox" checked={speech.autoRead} onChange={e => speech.setAutoRead(e.target.checked)} /> Read new replies</label>
-    <label><span className="sr-only">Tutor voice</span><select aria-label="Tutor voice" value={speech.voice} onChange={e => { speech.stop(); speech.setVoice(e.target.value) }}><option value="af_heart">Heart · US</option><option value="bf_emma">Emma · UK</option></select></label>
+    <label><span className="sr-only">Tutor voice</span><select aria-label="Tutor voice" value={speech.voice} onChange={e => { speech.stop(); speech.setVoice(e.target.value) }}><option value="device">Device voice</option><option value="af_heart">Heart · US (local)</option><option value="bf_emma">Emma · UK (local)</option></select></label>
     <label><span className="sr-only">Reading speed</span><select aria-label="Reading speed" value={speech.speed} onChange={e => speech.setSpeed(Number(e.target.value))}><option value="0.8">0.8× speed</option><option value="1">1× speed</option><option value="1.2">1.2× speed</option></select></label>
     {speech.active && <button type="button" onClick={speech.stop}><Square size={13} /> Stop reading</button>}
   </div>
@@ -23,7 +23,6 @@ export function ReadAloud({ speech, type, id, disabled }) {
   const playing = speech.active === `${type}:${id}`
   return <div className={`voice-reply-actions${playing ? ' is-reading' : ''}`}>
     <button type="button" disabled={disabled} onClick={() => playing ? speech.stop() : speech.play(type, id)} aria-label={playing ? 'Stop reading this reply' : 'Read this reply aloud'}>{playing ? <Square size={13} /> : <Volume2 size={14} />}{playing ? 'Stop' : 'Read aloud'}</button>
-    <button type="button" disabled={disabled} onClick={() => speech.play(type, id, true)}>Device voice</button>
   </div>
 }
 
@@ -38,7 +37,7 @@ export function VoiceInput({ input, disabled, onUseDraft }) {
       {(busy || input.canRetry) && <button type="button" onClick={input.cancel}>Cancel</button>}
       {input.canRetry && !busy && <button type="button" disabled={disabled} onClick={input.retry}>Retry for accuracy</button>}
     </div>
-    <small>English · Up to 30 seconds. Audio goes to Groq for transcription; this app does not save recordings.</small>
+    <details className="voice-input-info"><summary>English · 30s max · Voice info</summary><small>Audio goes to Groq for transcription. This app does not save recordings. Check your transcript before using it.</small></details>
     {input.error && <p className="voice-notice" role="alert">{input.error}</p>}
     {input.draft && <div className="voice-draft">
       <label htmlFor="voice-transcript">Check your transcript</label>

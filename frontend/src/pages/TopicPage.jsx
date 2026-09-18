@@ -2,7 +2,7 @@ import { ArrowRight } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import Breadcrumbs from '../components/Breadcrumbs.jsx'
-import SyllabusSidebar from '../components/SyllabusSidebar.jsx'
+import ReaderShell from '../components/ReaderShell.jsx'
 import { getQuestionCount } from '../api/content.js'
 import { syllabus } from '../data/syllabus.js'
 import NotFound from './NotFound.jsx'
@@ -29,8 +29,7 @@ export default function TopicPage() {
   if (!topic) return <NotFound />
 
   return (
-    <main className="reader-shell" id="main-content" tabIndex="-1">
-      <SyllabusSidebar topic={topic} />
+    <ReaderShell topic={topic}>
       <div className="reader-main">
         <Breadcrumbs topic={topic} />
         <header className="topic-page-heading">
@@ -55,6 +54,6 @@ export default function TopicPage() {
           ))}
         </section>
       </div>
-    </main>
+    </ReaderShell>
   )
 }

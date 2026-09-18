@@ -28,7 +28,7 @@ export default function SyllabusSidebar({ topic, activeCode }) {
         </select>
       </div>
 
-      <aside className="syllabus-sidebar" aria-label={`${topic.title} subtopics`}>
+      <aside className="syllabus-sidebar" id="syllabus-sidebar" aria-label={`${topic.title} subtopics`}>
         <div className="sidebar-heading">
           <span>{topic.number.padStart(2, '0')}</span>
           <Link to={`/topic/${topic.number}`} aria-current={!activeCode ? 'page' : undefined}>{topic.title}</Link>
@@ -40,14 +40,16 @@ export default function SyllabusSidebar({ topic, activeCode }) {
               to={`/topic/${topic.number}/${subtopic.code}`}
               className={activeCode === subtopic.code ? 'active' : ''}
               aria-current={activeCode === subtopic.code ? 'page' : undefined}
+              aria-label={`${subtopic.code} ${subtopic.title}`}
+              title={`${subtopic.code} ${subtopic.title}`}
             >
               <span>{subtopic.code}</span>
-              {subtopic.title}
+              <span className="sidebar-link-title">{subtopic.title}</span>
             </Link>
           ))}
-          <Link to={`/topic/${topic.number}/practice`} className={activeCode === 'practice' ? 'active practice-sidebar-link' : 'practice-sidebar-link'} aria-current={activeCode === 'practice' ? 'page' : undefined}>
+          <Link to={`/topic/${topic.number}/practice`} className={activeCode === 'practice' ? 'active practice-sidebar-link' : 'practice-sidebar-link'} aria-current={activeCode === 'practice' ? 'page' : undefined} aria-label="Practice questions" title="Practice questions">
             <span>{questionCount || '—'}</span>
-            Practice questions
+            <span className="sidebar-link-title">Practice questions</span>
           </Link>
         </nav>
       </aside>

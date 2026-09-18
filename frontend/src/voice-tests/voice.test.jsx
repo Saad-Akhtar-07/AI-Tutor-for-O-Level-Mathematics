@@ -1,8 +1,9 @@
 // @vitest-environment jsdom
-import { act, cleanup, renderHook } from '@testing-library/react'
+import { act, cleanup, render, renderHook, screen } from '@testing-library/react'
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import useVoiceInput from '../hooks/useVoiceInput.js'
 import useTutorSpeech from '../hooks/useTutorSpeech.js'
+import { ReadAloud, VoicePreferences } from '../components/TutorVoice.jsx'
 import { transcribeRecording, voiceRequest } from '../api/voice.js'
 
 vi.mock('../api/voice.js', () => ({ transcribeRecording: vi.fn(), voiceRequest: vi.fn() }))
@@ -88,10 +89,34 @@ test('cancelled playback cannot speak after preparation finishes', async () => {
   expect(speechSynthesis.speak).not.toHaveBeenCalled()
   expect(result.current.active).toBeNull()
 })
-test('worker failure uses prepared maths speech with the device voice', async () => {
+test('read aloud defaults to device speech without requesting local audio', async () => {
+  voiceRequest.mockImplementation(path => path === 'prepare' ? Promise.resolve({ segments: ['three fifths', 'Think about the denominator.'], warning: null }) : new Promise(() => {}))
+  speechSynthesis.speak.mockImplementation(utterance => queueMicrotask(() => utterance.onend()))
+  const { result } = renderHook(() => useTutorSpeech('one'))
+  expect(result.current.voice).toBe('device')
+  await act(() => result.current.play('chat', 'id'))
+  expect(voiceRequest).toHaveBeenCalledOnce()
+  expect(voiceRequest.mock.calls[0][0]).toBe('prepare')
+  expect(voiceRequest.mock.calls[0][1].voice).toBe('af_heart')
+  expect(speechSynthesis.speak.mock.calls.map(([utterance]) => utterance.text)).toEqual(['three fifths', 'Think about the denominator.'])
+  expect(result.current.notice).toBe('')
+  expect(result.current.active).toBeNull()
+})
+
+test('voice controls show device voice as the default with one read aloud button', () => {
+  const { result } = renderHook(() => useTutorSpeech('one'))
+  render(<><VoicePreferences speech={result.current} /><ReadAloud speech={result.current} type="chat" id="id" /></>)
+  expect(screen.getByRole('combobox', { name: 'Tutor voice' }).value).toBe('device')
+  expect(screen.getByRole('option', { name: 'Device voice' }).selected).toBe(true)
+  expect(screen.getByRole('button', { name: 'Read this reply aloud' })).toBeTruthy()
+  expect(screen.queryByRole('button', { name: 'Device voice' })).toBeNull()
+})
+
+test('worker failure for an optional local voice uses prepared maths speech with the device voice', async () => {
   voiceRequest.mockImplementation(path => path === 'prepare' ? Promise.resolve({ segments: ['three fifths'], warning: null }) : Promise.reject(new Error('busy')))
   speechSynthesis.speak.mockImplementation(utterance => queueMicrotask(() => utterance.onend()))
   const { result } = renderHook(() => useTutorSpeech('one'))
+  act(() => result.current.setVoice('af_heart'))
   await act(() => result.current.play('chat', 'id'))
   expect(speechSynthesis.speak.mock.calls[0][0].text).toBe('three fifths')
   expect(result.current.notice).toMatch(/Using your device voice/)

@@ -42,6 +42,38 @@ test('malformed or unsupported maths is explicit, never guessed', () => {
     assert.match(result.segments.join(' '), /check the mathematical expression/)
   }
 })
+
+const mathCheck = 'Please check the mathematical expression shown in the text.'
+const reminders = text => read(text).split(mathCheck).length - 1
+
+test('adjacent unsupported expressions get one reminder across symbols and line breaks', () => {
+  for (const separator of [' ', ' = ', ' + ', '\n\n', '.\n']) {
+    const text = String.raw`$\unknown{x}$` + separator + String.raw`$\unknown{y}$` + separator + String.raw`$\unknown{z}$`
+    assert.equal(reminders(text), 1, separator)
+    assert.ok(prepareSpeech(text).warning)
+  }
+  assert.equal(reminders('1/(x+2.\n\n2/(y+3.\n3/(z+4.'), 1)
+})
+
+test('English between unsupported maths blocks starts a fresh reminder', () => {
+  const text = String.raw`$\unknown{x}$ $\unknown{y}$. Think about the denominator. $\unknown{a}$ $\unknown{b}$.`
+  assert.equal(reminders(text), 2)
+  assert.deepEqual(prepareSpeech(text).segments, [mathCheck, 'Think about the denominator.', mathCheck])
+})
+
+test('probability formulas with word labels get one reminder and keep the following explanation', () => {
+  const text = 'In symbols:\nP(first A and second B)=P(first A)\u00d7P(second B | first A).\nHere A and B are both salt-flavoured packets.'
+  assert.equal(reminders(text), 1)
+  assert.equal(read(text), `In symbols: ${mathCheck} Here A and B are both salt-flavoured packets.`)
+})
+
+test('grouping reminders preserves supported maths between them', () => {
+  for (const [math, expected] of [['3/5', /three fifths/], ['2', /\b2\b/]]) {
+    const text = String.raw`$\unknown{x}$ ` + math + String.raw` $\unknown{y}$`
+    assert.equal(reminders(text), 2)
+    assert.match(read(text), expected)
+  }
+})
 test('decimals are not split into separate audio segments', () => {
   assert.deepEqual(prepareSpeech('Try 0.25.').segments, ['Try zero point two five .'])
 })

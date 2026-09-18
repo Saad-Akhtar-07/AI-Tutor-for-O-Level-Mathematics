@@ -3,7 +3,8 @@ import sre from 'speech-rule-engine'
 
 await sre.setupEngine({ locale: 'en', domain: 'mathspeak', style: 'default' })
 await sre.engineReady()
-export const NORMALIZER_VERSION = '1'
+export const NORMALIZER_VERSION = '2'
+const MATH_CHECK = 'Please check the mathematical expression shown in the text.'
 
 // Parse plain expressions before rendering: a slash must keep its operands.
 export function plainToLatex(input) {
@@ -69,10 +70,13 @@ export function speakMath(expression, latex = false) {
 export function prepareSpeech(text) {
   let warning = false
   const protectedMath = []
-  const protect = (expression, latex) => {
+  const protect = (expression, latex, unsupported = false) => {
     let speech
-    try { speech = speakMath(expression, latex) }
-    catch { warning = true; speech = 'Please check the mathematical expression shown in the text.' }
+    if (unsupported) { warning = true; speech = MATH_CHECK }
+    else {
+      try { speech = speakMath(expression, latex) }
+      catch { warning = true; speech = MATH_CHECK }
+    }
     protectedMath.push(speech)
     return ` MATHPLACEHOLDER${protectedMath.length - 1}END `
   }
@@ -84,11 +88,15 @@ export function prepareSpeech(text) {
   // Never send unhandled TeX/symbols to a voice that may confidently omit them.
   if (/[\\{}√∑∞∈∉⊂∅]/u.test(spoken)) {
     warning = true
-    spoken = spoken.split(/(?<=[.!?])\s+/).map(part => /[\\{}√∑∞∈∉⊂∅]/u.test(part) ? 'Please check the mathematical expression shown in the text.' : part).join(' ')
+    spoken = spoken.split(/(?<=[.!?])\s+/).map(part => /[\\{}√∑∞∈∉⊂∅]/u.test(part) ? MATH_CHECK : part).join(' ')
   }
+  // Symbols, punctuation and line breaks do not start another maths block.
+  // Spoken words between reminders do, so each explanation keeps its place.
+  spoken = spoken.replace(/(?:Please check the mathematical expression shown in the text\.[^\p{L}\p{N}]*){2,}/gu, `${MATH_CHECK} `).trim()
   const sentences = spoken.match(/[^.!?]+(?:[.!?]+|$)/g) || [spoken]
   const segments = []
   for (const sentence of sentences) {
+    if (!/[\p{L}\p{N}]/u.test(sentence)) continue
     // Bound model work even when a reply has no punctuation.
     const words = sentence.trim().split(/\s+/)
     let chunk = ''
@@ -106,6 +114,23 @@ function extractPlainMath(text, protect) {
   let output = ''
   for (let start = 0; start < text.length;) {
     if (!/[A-Za-z0-9(√+\-]/.test(text[start]) || (start > 0 && /[A-Za-z0-9]/.test(text[start - 1]))) { output += text[start++]; continue }
+    // Words inside a probability call label the outcomes, rather than prose
+    // between expressions. Keep the whole call together if it is unsupported.
+    if (text.startsWith('P(', start)) {
+      let end = start + 2
+      let depth = 1
+      while (end < text.length && depth) {
+        if (text[end] === '(') depth++
+        else if (text[end] === ')') depth--
+        end++
+      }
+      const call = text.slice(start, end)
+      if (!depth && call.match(/[A-Za-z]{2,}/g)?.some(word => word !== 'sqrt')) {
+        output += protect(call, false, true)
+        start = end
+        continue
+      }
+    }
     let end = start
     let tokens = 0
     while (end < text.length) {

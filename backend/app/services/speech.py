@@ -20,6 +20,7 @@ _cache = OrderedDict()
 _cache_bytes = 0
 _cache_lock = threading.Lock()
 _slot = threading.BoundedSemaphore(1)
+_MATH_CHECK = "Please check the mathematical expression shown in the text."
 
 
 def start_worker():
@@ -68,11 +69,12 @@ def prepare(text: str) -> dict:
         omitted = False
         for sentence in re.split(r"(?<=[.!?])\s+|\n+", text):
             if re.search(r"[0-9\\$^=<>+*/{}|≤≥²³√∩∪−]", sentence):
-                segments.append("Please check the mathematical expression shown in the text.")
+                if not segments or segments[-1] != _MATH_CHECK:
+                    segments.append(_MATH_CHECK)
                 omitted = True
-            elif sentence.strip():
+            elif any(character.isalpha() for character in sentence):
                 segments.append(sentence.strip())
-        return {"segments": segments, "warning": "Maths pronunciation is unavailable; expressions need visual checking." if omitted else None, "normalizer_version": "prose-only-1", "device_only": True}
+        return {"segments": segments, "warning": "Maths pronunciation is unavailable; expressions need visual checking." if omitted else None, "normalizer_version": "prose-only-2", "device_only": True}
 
 
 def synthesize(session_id, source_id, text: str, voice: str) -> bytes:
